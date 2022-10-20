@@ -1,4 +1,4 @@
-import { Autocomplete, Box, Grid, TextField } from "@mui/material";
+import { Autocomplete, Box, Button, Grid, TextField } from "@mui/material";
 import { Match, Team } from "@prisma/client";
 import { match } from "assert";
 import { GetServerSideProps } from "next";
@@ -9,7 +9,11 @@ import prisma from "../lib/prisma";
 export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
   const session = await getSession({ req });
 
-  const teams = await prisma.team.findMany();
+  const teams = await prisma.team.findMany({
+    orderBy: {
+      winningOdds: "asc",
+    },
+  });
 
   if (!session.user.id) {
     return {
@@ -61,17 +65,25 @@ const Winner = ({ teams, userPick }: Props) => {
       <Box>Pick a winner</Box>
       <Grid container>
         {teams.map((team) => (
-          <Grid
-            item
-            key={team.id}
-            onClick={() => handleClick(team.id)}
-            sx={{
-              cursor: "pointer",
-              backgroundColor: team.id == picked ? "lightblue" : "unset",
-            }}
-          >
-            <Box>{team.name}</Box>
-            <Box>{team.winningOdds}</Box>
+          <Grid item key={team.id} m={0.5}>
+            <Button
+              onClick={() => handleClick(team.id)}
+              variant={team.id == picked ? "contained" : "outlined"}
+              fullWidth
+            >
+              <Box
+                display="flex"
+                flexDirection="row"
+                alignItems="center"
+                justifyContent="space-between"
+                width="230px"
+              >
+                <Box mr={1} textAlign="center">
+                  {team.name}
+                </Box>
+                <Box textAlign="center">{team.winningOdds}</Box>
+              </Box>
+            </Button>
           </Grid>
         ))}
       </Grid>

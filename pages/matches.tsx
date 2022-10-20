@@ -1,4 +1,5 @@
-import { Box, Grid } from "@mui/material";
+import { Box, Button, Grid } from "@mui/material";
+import { styled } from "@mui/system";
 import { Match, Pick, Result, Team } from "@prisma/client";
 import { GetServerSideProps } from "next";
 import { getSession } from "next-auth/react";
@@ -36,6 +37,10 @@ type Props = {
   })[];
 };
 
+const StyledBox = styled(Box)(() => ({
+  width: "125px",
+}));
+
 const Matches = ({ matches }: Props) => {
   const handleClick = async (matchId: number, result: Result) => {
     try {
@@ -51,42 +56,44 @@ const Matches = ({ matches }: Props) => {
 
   return (
     <Box>
-      <Grid container>
+      <Grid container alignItems="center">
         {matches.map((match) => {
           const pick =
             (match.Pick.length && match.Pick[0].pickedResult) ??
             Result.NO_RESULT;
 
           return (
-            <Grid item key={match.id}>
-              <Box
-                onClick={() => handleClick(match.id, Result.HOME_TEAM)}
-                sx={{
-                  cursor: "pointer",
-                  backgroundColor:
-                    pick == Result.HOME_TEAM ? "lightblue" : "unset",
-                }}
-              >
-                {match.home.name}
+            <Grid
+              item
+              key={match.id}
+              m={2}
+              display="flex"
+              xs={12}
+              justifyContent="center"
+            >
+              <Box onClick={() => handleClick(match.id, Result.HOME_TEAM)}>
+                <Button
+                  variant={pick == Result.HOME_TEAM ? "contained" : "outlined"}
+                >
+                  <StyledBox mr={1}>{match.home.name}</StyledBox>
+                  <StyledBox>{match.homeWinOdds}</StyledBox>
+                </Button>
               </Box>
-              <Box
-                onClick={() => handleClick(match.id, Result.DRAW)}
-                sx={{
-                  cursor: "pointer",
-                  backgroundColor: pick == Result.DRAW ? "lightblue" : "unset",
-                }}
-              >
-                Draw
+              <Box onClick={() => handleClick(match.id, Result.DRAW)} mx={0.5}>
+                <Button
+                  variant={pick == Result.DRAW ? "contained" : "outlined"}
+                >
+                  <StyledBox mr={1}>Draw</StyledBox>
+                  <StyledBox>{match.drawOdds}</StyledBox>
+                </Button>
               </Box>
-              <Box
-                onClick={() => handleClick(match.id, Result.AWAY_TEAM)}
-                sx={{
-                  cursor: "pointer",
-                  backgroundColor:
-                    pick == Result.AWAY_TEAM ? "lightblue" : "unset",
-                }}
-              >
-                {match.home.name}
+              <Box onClick={() => handleClick(match.id, Result.AWAY_TEAM)}>
+                <Button
+                  variant={pick == Result.AWAY_TEAM ? "contained" : "outlined"}
+                >
+                  <StyledBox mr={1}>{match.away.name}</StyledBox>
+                  <StyledBox>{match.awayWinOdds}</StyledBox>
+                </Button>
               </Box>
             </Grid>
           );
