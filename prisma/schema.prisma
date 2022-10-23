@@ -43,6 +43,13 @@ model Match {
   result      Result? // "HOME_TEAM | "AWAY_TEAM" | "DRAW" | "NO_RESULT"
 }
 
+model Player {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+  odds Int    @default(0)
+  User User[]
+}
+
 enum Result {
   HOME_TEAM
   AWAY_TEAM
@@ -66,11 +73,11 @@ model Account {
   provider           String
   providerAccountId  String  @map("provider_account_id")
   refresh_token      String?
-  access_token       String?
+  access_token       String? @db.Text
   expires_at         Int?
   token_type         String?
   scope              String?
-  id_token           String?
+  id_token           String? @db.Text
   session_state      String?
   oauth_token_secret String?
   oauth_token        String?
@@ -97,9 +104,11 @@ model User {
   posts         Post[]    @relation("userPosts")
   picks         Pick[]    @relation("userPicks")
   winnerPick    Team?     @relation(fields: [teamId], references: [id])
+  topScorerPick Player?   @relation(fields: [playerId], references: [id])
   accounts      Account[]
   sessions      Session[]
   teamId        Int?
+  playerId      Int?
 }
 
 model VerificationToken {

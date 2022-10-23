@@ -1,5 +1,5 @@
 import { Box, Button, Grid } from "@mui/material";
-import { Team } from "@prisma/client";
+import { Player } from "@prisma/client";
 import { GetServerSideProps } from "next";
 import { getSession } from "next-auth/react";
 import { useState } from "react";
@@ -8,16 +8,16 @@ import prisma from "../lib/prisma";
 export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
   const session = await getSession({ req });
 
-  const teams = await prisma.team.findMany({
+  const players = await prisma.player.findMany({
     orderBy: {
-      winningOdds: "asc",
+      odds: "asc",
     },
   });
 
   if (!session.user.id) {
     return {
       props: {
-        teams,
+        players,
         userPick: null,
       },
     };
@@ -31,27 +31,27 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
 
   return {
     props: {
-      teams: JSON.parse(JSON.stringify(teams)),
-      userPick: user.teamId,
+      players: JSON.parse(JSON.stringify(players)),
+      userPick: user.playerId,
     },
   };
 };
 
 type Props = {
-  teams: Team[];
-  userPick: Team["id"] | null;
+  players: Player[];
+  userPick: Player["id"] | null;
 };
 
-const Winner = ({ teams, userPick }: Props) => {
+const TopScorer = ({ players, userPick }: Props) => {
   const [picked, setPicked] = useState<number>(userPick);
 
-  const handleClick = async (teamId: number) => {
+  const handleClick = async (playerId: number) => {
     try {
-      setPicked(teamId);
-      const res = await fetch("/api/winner", {
+      setPicked(playerId);
+      const res = await fetch("/api/topScorer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teamId }),
+        body: JSON.stringify({ playerId }),
       });
     } catch (e) {
       setPicked(userPick);
@@ -62,11 +62,11 @@ const Winner = ({ teams, userPick }: Props) => {
   return (
     <Box>
       <Grid container>
-        {teams.map((team) => (
-          <Grid item key={team.id} m={0.5}>
+        {players.map((player) => (
+          <Grid item key={player.id} m={0.5}>
             <Button
-              onClick={() => handleClick(team.id)}
-              variant={team.id == picked ? "contained" : "outlined"}
+              onClick={() => handleClick(player.id)}
+              variant={player.id == picked ? "contained" : "outlined"}
               fullWidth
             >
               <Box
@@ -77,9 +77,9 @@ const Winner = ({ teams, userPick }: Props) => {
                 width="230px"
               >
                 <Box mr={1} textAlign="center">
-                  {team.name}
+                  {player.name}
                 </Box>
-                <Box textAlign="center">{team.winningOdds}</Box>
+                <Box textAlign="center">{player.odds}</Box>
               </Box>
             </Button>
           </Grid>
@@ -89,4 +89,4 @@ const Winner = ({ teams, userPick }: Props) => {
   );
 };
 
-export default Winner;
+export default TopScorer;

@@ -19,13 +19,14 @@ export default async function handle(req, res) {
 
     const fixtures = response.sports[0].tournaments[0].events
       .filter((event) => {
-        // return true;
+        return true;
         return event.type == "Fixture";
       })
       .map((fixture) => {
         return {
           ...fixture,
           ebetDraws: fixture.ebetDraws.filter((draw) => {
+            return true;
             return draw.row.description == "1X2";
           }),
         };
