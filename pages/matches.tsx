@@ -1,5 +1,6 @@
 import { Box, Button, Grid } from "@mui/material";
 import { Match, Pick, Result, Team } from "@prisma/client";
+import { differenceInDays } from "date-fns";
 import { GetServerSideProps } from "next";
 import { getSession } from "next-auth/react";
 import MatchComponent from "../components/matches/Match";
@@ -22,6 +23,11 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
           }
         : {}),
     },
+    orderBy: [
+      {
+        startTime: "asc",
+      },
+    ],
   });
 
   return {
@@ -50,18 +56,55 @@ const Matches = ({ matches }: Props) => {
     }
   };
 
+  const renderMatchComponents = () => {
+    try {
+      console.log(matches);
+      var lastDate = new Date(matches[0].startTime);
+      return (
+        <Box
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+        >
+          {lastDate.toDateString()}
+          {matches.map((match) => {
+            const result =
+              (match.Pick.length && match.Pick[0].pickedResult) ??
+              Result.NO_RESULT;
+
+            let renderStamp = false;
+            const startDate = new Date(match.startTime);
+            if (differenceInDays(startDate, lastDate) > 0) {
+              renderStamp = true;
+              lastDate = startDate;
+            }
+
+            return (
+              <Box
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                justifyContent="center"
+                key={match.id}
+              >
+                {renderStamp && startDate.toDateString()}
+                <MatchComponent match={match} result={result} />
+              </Box>
+            );
+          })}
+        </Box>
+      );
+    } catch (e) {
+      console.log(e);
+      return <></>;
+    }
+  };
+
   return (
     <Box>
-      <Grid container alignItems="center">
-        {matches.map((match) => {
-          const result =
-            (match.Pick.length && match.Pick[0].pickedResult) ??
-            Result.NO_RESULT;
-
-          return (
-            <MatchComponent match={match} result={result} key={match.id} />
-          );
-        })}
+      <Grid container alignItems="center" justifyContent="center">
+        {renderMatchComponents()}
       </Grid>
     </Box>
   );
