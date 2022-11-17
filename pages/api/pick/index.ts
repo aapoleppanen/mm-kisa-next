@@ -1,4 +1,5 @@
 import { getSession } from "next-auth/react";
+import { disabledToday } from "../../../lib/config";
 import prisma from "../../../lib/prisma";
 
 export default async function handle(req, res) {
@@ -16,9 +17,22 @@ export default async function handle(req, res) {
       matchId,
       userId: session.user.id,
     },
+    include: {
+      match: {
+        select: {
+          startTime: true,
+        },
+      },
+    },
   });
 
   if (pick) {
+    if (disabledToday(pick.match.startTime)) {
+      res.statusCode = 403;
+      res.json({ error: "Too late" });
+      return;
+    }
+
     const opResult = await prisma.pick.update({
       where: {
         id: pick.id,

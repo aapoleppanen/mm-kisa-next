@@ -130,7 +130,7 @@ export interface Referee {
 }
 
 export interface Score {
-  winner: string;
+  winner: "HOME_TEAM" | "AWAY_TEAM" | "DRAW" | "NO_RESULT";
   duration: string;
   fullTime: Time;
   halfTime: Time;

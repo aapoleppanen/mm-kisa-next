@@ -1,6 +1,6 @@
 import { Box, Button, Grid } from "@mui/material";
 import { Match, Pick, Result, Team } from "@prisma/client";
-import { differenceInDays } from "date-fns";
+import { isSameDay } from "date-fns";
 import { GetServerSideProps } from "next";
 import { getSession } from "next-auth/react";
 import MatchComponent from "../components/matches/Match";
@@ -8,6 +8,16 @@ import prisma from "../lib/prisma";
 
 export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
   const session = await getSession({ req });
+
+  if (!session?.user) {
+    return {
+      redirect: {
+        permanent: false,
+        destination: "/",
+      },
+      props: {},
+    };
+  }
 
   const matches = await prisma.match.findMany({
     include: {
@@ -58,7 +68,6 @@ const Matches = ({ matches }: Props) => {
 
   const renderMatchComponents = () => {
     try {
-      console.log(matches);
       var lastDate = new Date(matches[0].startTime);
       return (
         <Box
@@ -67,7 +76,12 @@ const Matches = ({ matches }: Props) => {
           alignItems="center"
           justifyContent="center"
         >
-          {lastDate.toDateString()}
+          <Box mt={4}>
+            Remember to make your pick 1 hour before the match starts.
+          </Box>
+          <Box typography="h4" mt={4}>
+            {lastDate.toDateString()}
+          </Box>
           {matches.map((match) => {
             const result =
               (match.Pick.length && match.Pick[0].pickedResult) ??
@@ -75,7 +89,7 @@ const Matches = ({ matches }: Props) => {
 
             let renderStamp = false;
             const startDate = new Date(match.startTime);
-            if (differenceInDays(startDate, lastDate) > 0) {
+            if (!isSameDay(startDate, lastDate)) {
               renderStamp = true;
               lastDate = startDate;
             }
@@ -88,7 +102,17 @@ const Matches = ({ matches }: Props) => {
                 justifyContent="center"
                 key={match.id}
               >
-                {renderStamp && startDate.toDateString()}
+                {renderStamp && (
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    flexDirection="column"
+                    mt={4}
+                  >
+                    <Box typography="h4">{startDate.toDateString()}</Box>
+                  </Box>
+                )}
                 <MatchComponent match={match} result={result} />
               </Box>
             );

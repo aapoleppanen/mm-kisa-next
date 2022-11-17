@@ -1,9 +1,22 @@
 import { Box, Grid } from "@mui/material";
 import { User } from "@prisma/client";
 import { GetServerSideProps } from "next";
+import { getSession } from "next-auth/react";
 import prisma from "../lib/prisma";
 
 export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
+  const session = await getSession({ req });
+
+  if (!session?.user) {
+    return {
+      redirect: {
+        permanent: false,
+        destination: "/",
+      },
+      props: {},
+    };
+  }
+
   const users: { total: number; name: string; id: string } =
     await prisma.$queryRaw`
   SELECT SUM(odds) AS total, name, User.id AS id

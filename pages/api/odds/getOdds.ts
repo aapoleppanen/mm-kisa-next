@@ -1,7 +1,7 @@
 import { request } from "graphql-request";
+import { veikkausGraphQlEndpoint } from "../../../lib/config";
 import { events } from "./queries";
 import { EventsResponse } from "./types";
-import { veikkausGraphQlEndpoint } from "./updateTeamOdds";
 
 export default async function handle(req, res) {
   try {

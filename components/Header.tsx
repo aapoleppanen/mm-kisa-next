@@ -20,21 +20,25 @@ const Header = () => {
         m={2}
       >
         <Box display="flex" m={1} gap={1}>
-          <Link href="/profile">
-            <a data-active={isActive("/profile")}>Profile</a>
-          </Link>
-          <Link href="/matches">
-            <a data-active={isActive("/matches")}>Matches</a>
-          </Link>
-          <Link href="/winner">
-            <a data-active={isActive("/winner")}>Winner</a>
-          </Link>
-          <Link href="/topScorer">
-            <a data-active={isActive("/topScorer")}>Top Scorer</a>
-          </Link>
-          <Link href="/leaderboard">
-            <a data-active={isActive("/leaderboard")}>Leaderboard</a>
-          </Link>
+          {session && (
+            <>
+              <Link href="/profile">
+                <a data-active={isActive("/profile")}>Profile</a>
+              </Link>
+              <Link href="/matches">
+                <a data-active={isActive("/matches")}>Matches</a>
+              </Link>
+              <Link href="/winner">
+                <a data-active={isActive("/winner")}>Winner</a>
+              </Link>
+              <Link href="/topScorer">
+                <a data-active={isActive("/topScorer")}>Top Scorer</a>
+              </Link>
+              <Link href="/leaderboard">
+                <a data-active={isActive("/leaderboard")}>Leaderboard</a>
+              </Link>
+            </>
+          )}
         </Box>
         <Box>
           {!session ? (

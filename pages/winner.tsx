@@ -3,10 +3,21 @@ import { Team } from "@prisma/client";
 import { GetServerSideProps } from "next";
 import { getSession } from "next-auth/react";
 import { useState } from "react";
+import { disablePrePicks } from "../lib/config";
 import prisma from "../lib/prisma";
 
 export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
   const session = await getSession({ req });
+
+  if (!session?.user) {
+    return {
+      redirect: {
+        permanent: false,
+        destination: "/profile",
+      },
+      props: {},
+    };
+  }
 
   const teams = await prisma.team.findMany({
     orderBy: {
@@ -68,6 +79,7 @@ const Winner = ({ teams, userPick }: Props) => {
               onClick={() => handleClick(team.id)}
               variant={team.id == picked ? "contained" : "outlined"}
               fullWidth
+              disabled={disablePrePicks()}
             >
               <Box
                 display="flex"

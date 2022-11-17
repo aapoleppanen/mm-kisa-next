@@ -1,13 +1,10 @@
-import { request } from "graphql-request";
+import request from "graphql-request";
+import { veikkausGraphQlEndpoint } from "../../../lib/config";
 import prisma from "../../../lib/prisma";
-import { VeikkausFDWorldCupTeamMap } from "../../../utils/adapterUtils";
-import { events } from "./queries";
-import { EventsResponse } from "./types";
+import { events } from "../../../pages/api/odds/queries";
+import { EventsResponse } from "../../../pages/api/odds/types";
 
-export const veikkausGraphQlEndpoint =
-  "https://v3.middle.prod.gcp.veikkaus.fi/midas/graphql";
-
-export default async function handle(req, res) {
+export const updatePlayerOdds = async () => {
   try {
     const response = await request<EventsResponse>(
       veikkausGraphQlEndpoint,
@@ -41,9 +38,9 @@ export default async function handle(req, res) {
     });
 
     console.log("successfully updated player winning odds");
-    res.json({ success: true });
+    return true;
   } catch (e) {
     console.error(e);
-    res.json({ success: false });
+    return false;
   }
-}
+};

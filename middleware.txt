@@ -7,3 +7,21 @@
 //     return NextResponse.redirect(url);
 //   }
 // }
+
+import { withAuth } from "next-auth/middleware";
+
+export default withAuth({
+  pages: {
+    signIn: "/api/auth/signin",
+  },
+});
+
+if (!session?.user) {
+  return {
+    redirect: {
+      permanent: false,
+      destination: "/login ",
+    },
+    props: {},
+  };
+}

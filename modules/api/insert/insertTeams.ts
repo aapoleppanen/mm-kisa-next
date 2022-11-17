@@ -1,6 +1,6 @@
 import prisma from "../../../lib/prisma";
 
-export default async function (req, res) {
+export const insertTeams = async () => {
   try {
     const path = "https://api.football-data.org/v4/competitions/WC/teams";
     const response = await fetch(path, {
@@ -20,9 +20,9 @@ export default async function (req, res) {
     });
 
     console.log(`Succesfully inserted ${many} teams`);
-    res.json({ success: true });
+    return true;
   } catch (e) {
     console.error(e);
-    res.json({ success: false });
+    return false;
   }
-}
+};

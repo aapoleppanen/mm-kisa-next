@@ -1,6 +1,8 @@
 import { Box, Button, Grid, styled } from "@mui/material";
 import { Match, Pick, Result, Team } from "@prisma/client";
+import { format } from "date-fns";
 import { useState } from "react";
+import { disabledToday } from "../../lib/config";
 
 // display="flex" width="300px" justifyContent="space-between"
 
@@ -37,11 +39,20 @@ const MatchComponent = ({ match, result }: Props) => {
   const [currentPick, setCurrentPick] = useState<Result | "">(result);
 
   return (
-    <>
-      <Grid item m={2} display="flex" xs={12} justifyContent="center">
-        <Box onClick={() => handleClick(match.id, Result.HOME_TEAM)}>
+    <Box
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      flexDirection="column"
+      mt={2}
+    >
+      {format(new Date(match.startTime), "HH:mm")}
+      <Grid item mb={2} mt={1} display="flex" xs={12} justifyContent="center">
+        <Box>
           <Button
             variant={currentPick == Result.HOME_TEAM ? "contained" : "outlined"}
+            onClick={() => handleClick(match.id, Result.HOME_TEAM)}
+            disabled={disabledToday(new Date(match.startTime))}
           >
             <StyledBox>
               <img
@@ -55,9 +66,11 @@ const MatchComponent = ({ match, result }: Props) => {
             </StyledBox>
           </Button>
         </Box>
-        <Box onClick={() => handleClick(match.id, Result.DRAW)} mx={0.5}>
+        <Box mx={0.5}>
           <Button
             variant={currentPick == Result.DRAW ? "contained" : "outlined"}
+            onClick={() => handleClick(match.id, Result.DRAW)}
+            disabled={disabledToday(new Date(match.startTime))}
           >
             <StyledBox>
               <Box>Draw</Box>
@@ -65,9 +78,11 @@ const MatchComponent = ({ match, result }: Props) => {
             </StyledBox>
           </Button>
         </Box>
-        <Box onClick={() => handleClick(match.id, Result.AWAY_TEAM)}>
+        <Box>
           <Button
             variant={currentPick == Result.AWAY_TEAM ? "contained" : "outlined"}
+            onClick={() => handleClick(match.id, Result.AWAY_TEAM)}
+            disabled={disabledToday(new Date(match.startTime))}
           >
             <StyledBox>
               <img
@@ -88,7 +103,7 @@ const MatchComponent = ({ match, result }: Props) => {
           width: auto;
         }
       `}</style>
-    </>
+    </Box>
   );
 };
 
