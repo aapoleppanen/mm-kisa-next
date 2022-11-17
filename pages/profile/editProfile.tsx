@@ -10,9 +10,15 @@ import { useRouter } from "next/router";
 
 export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
   const session = await getSession({ req });
-  if (!session || !session.user.email) {
-    res.statusCode = 403;
-    return { props: { user: null } };
+
+  if (!session?.user) {
+    return {
+      redirect: {
+        permanent: false,
+        destination: "/",
+      },
+      props: {},
+    };
   }
 
   const user = await prisma.user.findUnique({

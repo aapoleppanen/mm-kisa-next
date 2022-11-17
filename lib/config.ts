@@ -1,10 +1,4 @@
-import {
-  differenceInDays,
-  differenceInHours,
-  formatDuration,
-  intervalToDuration,
-  isBefore,
-} from "date-fns";
+import { differenceInHours, isBefore } from "date-fns";
 
 export const veikkausGraphQlEndpoint =
   "https://v3.middle.prod.gcp.veikkaus.fi/midas/graphql";
