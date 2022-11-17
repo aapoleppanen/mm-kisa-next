@@ -12,7 +12,7 @@ export default async function handle(req, res) {
     return { error: "Please sign in" };
   }
 
-  if (disablePrePicks) {
+  if (disablePrePicks()) {
     res.statusCode = 403;
     return { error: "Cannot change winner anymore!" };
   }
