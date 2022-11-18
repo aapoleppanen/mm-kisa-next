@@ -1,8 +1,9 @@
-import { Box, Divider, Grid } from "@mui/material";
-import { User } from "@prisma/client";
+import { Box, Collapse, Divider, Grid } from "@mui/material";
+import { Match, Player, Team, User, Pick } from "@prisma/client";
 import { GetServerSideProps } from "next";
 import { getSession } from "next-auth/react";
-import Leaderboard from "../components/Leaderboard";
+import { useState } from "react";
+import PicksOverview from "../components/PicksOverview";
 import prisma from "../lib/prisma";
 
 export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
@@ -47,6 +48,67 @@ type Props = {
   users: { total: number; name: string; id: string }[];
 };
 
-const LeaderboardPage = ({ users }: Props) => <Leaderboard users={users} />;
+export type UserPicks = User & {
+  picks: (Pick & {
+    match: Match & {
+      home: Team;
+      away: Team;
+    };
+  })[];
+  winnerPick: Team;
+  topScorerPick: Player;
+};
+
+const LeaderboardPage = ({ users }: Props) => {
+  const [selected, setSelected] = useState<string | null>(null);
+  const [picks, setPicks] = useState<UserPicks | null>(null);
+
+  const handleExpand = async (id: string) => {
+    try {
+      if (selected === id) {
+        setSelected(null);
+        return;
+      }
+      const res = await fetch(`api/${id}/picks`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+      const { picks: picksRes }: { picks: UserPicks } = await res.json();
+
+      setPicks(picksRes);
+      setSelected(id);
+    } catch (e) {
+      console.error(e);
+      setPicks(null);
+      setSelected(null);
+    }
+  };
+
+  return (
+    <Box>
+      <Box typography="h4" textAlign="center" p={1}>
+        Leaderboard
+      </Box>
+      {users.map((user) => (
+        <Box
+          key={user.id}
+          width="100%"
+          p={1}
+          onClick={() => handleExpand(user.id)}
+        >
+          <Box display="flex" justifyContent="space-between" mt={0.5} p={1}>
+            <Box>{user.name}</Box>
+            <Box>{user.total ?? 0}</Box>
+          </Box>
+          <Divider />
+          <Collapse in={selected === user.id && !!picks} unmountOnExit>
+            <PicksOverview picks={picks} />
+          </Collapse>
+          {/* {selected === user.id && picks && } */}
+        </Box>
+      ))}
+    </Box>
+  );
+};
 
 export default LeaderboardPage;
