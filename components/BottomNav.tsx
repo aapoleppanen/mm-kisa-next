@@ -18,6 +18,25 @@ export default function BottomNav() {
 
   console.log(router.pathname);
 
+  if (!session) {
+    return (
+      <BottomNavigation
+        sx={{ width: "100%", position: "fixed", bottom: 0 }}
+        value={router.pathname}
+      >
+        {/* @ts-ignore next-line */}
+        <BottomNavigationAction
+          label="Login"
+          value="/api/auth/signin"
+          icon={<Login />}
+          to="/api/auth/signin"
+          href="/api/auth/signin"
+          LinkComponent={MuiLink}
+        />
+      </BottomNavigation>
+    );
+  }
+
   return (
     <BottomNavigation
       sx={{ width: "100%", position: "fixed", bottom: 0 }}
@@ -68,17 +87,6 @@ export default function BottomNav() {
         href="/leaderboard"
         LinkComponent={MuiLink}
       />
-      {!session && (
-        // @ts-ignore next-line
-        <BottomNavigationAction
-          label="Login"
-          value="/api/auth/signin"
-          icon={<Login />}
-          to="/api/auth/signin"
-          href="/api/auth/signin"
-          LinkComponent={MuiLink}
-        />
-      )}
     </BottomNavigation>
   );
 }
