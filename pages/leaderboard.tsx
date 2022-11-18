@@ -1,7 +1,8 @@
-import { Box, Grid } from "@mui/material";
+import { Box, Divider, Grid } from "@mui/material";
 import { User } from "@prisma/client";
 import { GetServerSideProps } from "next";
 import { getSession } from "next-auth/react";
+import Leaderboard from "../components/Leaderboard";
 import prisma from "../lib/prisma";
 
 export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
@@ -46,24 +47,6 @@ type Props = {
   users: { total: number; name: string; id: string }[];
 };
 
-const Leaderboard = ({ users }: Props) => (
-  <Grid container display="flex" justifyContent="center">
-    {users.map((user) => (
-      <Grid
-        item
-        key={user.id}
-        xs={2}
-        borderBottom="1px solid black"
-        my={1}
-        p={1}
-      >
-        <Box display="flex" justifyContent="space-around">
-          <Box>{user.name}</Box>
-          <Box>{user.total ?? 0}</Box>
-        </Box>
-      </Grid>
-    ))}
-  </Grid>
-);
+const LeaderboardPage = ({ users }: Props) => <Leaderboard users={users} />;
 
-export default Leaderboard;
+export default LeaderboardPage;

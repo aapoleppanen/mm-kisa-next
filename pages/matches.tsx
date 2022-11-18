@@ -1,10 +1,15 @@
-import { Box, Button, Grid } from "@mui/material";
+import { Box, Button, Card, Grid, Paper, useMediaQuery } from "@mui/material";
 import { Match, Pick, Result, Team } from "@prisma/client";
 import { isSameDay } from "date-fns";
-import { GetServerSideProps } from "next";
+import { GetServerSideProps, NextPage } from "next";
 import { getSession } from "next-auth/react";
+import useSWR, { Fetcher } from "swr";
+import BottomNav from "../components/BottomNav";
+import Header from "../components/Header";
+import Leaderboard from "../components/Leaderboard";
 import MatchComponent from "../components/matches/Match";
 import prisma from "../lib/prisma";
+import { theme } from "./_app";
 
 export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
   const session = await getSession({ req });
@@ -53,19 +58,7 @@ type Props = {
   })[];
 };
 
-const Matches = ({ matches }: Props) => {
-  const handleClick = async (matchId: number, result: Result) => {
-    try {
-      const res = await fetch("/api/pick", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ matchId, result }),
-      });
-    } catch (e) {
-      console.error;
-    }
-  };
-
+const Matches: NextPage<Props> = ({ matches }) => {
   const renderMatchComponents = () => {
     try {
       var lastDate = new Date(matches[0].startTime);
@@ -76,9 +69,7 @@ const Matches = ({ matches }: Props) => {
           alignItems="center"
           justifyContent="center"
         >
-          <Box mt={4}>
-            Remember to make your pick 1 hour before the match starts.
-          </Box>
+          <Box mt={4}>PICKS MUST BE MADE 1 HOUR BEFORE MATCH STARTS</Box>
           <Box typography="h4" mt={4}>
             {lastDate.toDateString()}
           </Box>
@@ -126,10 +117,45 @@ const Matches = ({ matches }: Props) => {
   };
 
   return (
+    <Grid container alignItems="center" justifyContent="center">
+      {renderMatchComponents()}
+    </Grid>
+  );
+};
+
+type LBoard = {
+  users: { total: number; name: string; id: string }[];
+};
+
+const fetcher: Fetcher<LBoard, string> = (path) =>
+  fetch(path).then((res) => res.json());
+
+// @ts-ignore next-line
+Matches.getLayout = function getLayout(page) {
+  const { data, error } = useSWR("/api/leaderboard", fetcher);
+  const mobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  return (
     <Box>
-      <Grid container alignItems="center" justifyContent="center">
-        {renderMatchComponents()}
-      </Grid>
+      {!mobile && <Header />}
+      <Box display="flex">
+        <Box
+          height="100vh"
+          overflow="scroll"
+          pt={mobile ? 0 : 10}
+          pb={mobile ? 10 : 4}
+          px={2}
+          flexGrow={1}
+        >
+          {page}
+        </Box>
+        {!mobile && data && (
+          <Box height="100vh" overflow="scroll" pt={10} pb={4} px={4}>
+            <Leaderboard users={data.users} />
+          </Box>
+        )}
+      </Box>
+      {mobile && <BottomNav />}
     </Box>
   );
 };

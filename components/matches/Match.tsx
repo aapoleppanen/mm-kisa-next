@@ -1,8 +1,9 @@
-import { Box, Button, Grid, styled } from "@mui/material";
+import { Box, Button, Grid, styled, useMediaQuery } from "@mui/material";
 import { Match, Pick, Result, Team } from "@prisma/client";
 import { format } from "date-fns";
 import { useState } from "react";
 import { disabledToday } from "../../lib/config";
+import { theme } from "../../pages/_app";
 
 // display="flex" width="300px" justifyContent="space-between"
 
@@ -11,6 +12,8 @@ const StyledBox = styled(Box)(() => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
+  paddingTop: 8,
+  paddingBottom: 8,
 }));
 
 type Props = {
@@ -22,6 +25,7 @@ type Props = {
 };
 
 const MatchComponent = ({ match, result }: Props) => {
+  const mobile = useMediaQuery(theme.breakpoints.down("lg"));
   const handleClick = async (matchId: number, result: Result) => {
     try {
       setCurrentPick(result);
@@ -47,8 +51,16 @@ const MatchComponent = ({ match, result }: Props) => {
       mt={2}
     >
       {format(new Date(match.startTime), "HH:mm")}
-      <Grid item mb={2} mt={1} display="flex" xs={12} justifyContent="center">
-        <Box>
+      <Grid
+        item
+        mb={2}
+        mt={1}
+        display="flex"
+        justifyContent="center"
+        xs={12}
+        flexDirection={mobile ? "column" : "unset"}
+      >
+        <Box m={1}>
           <Button
             variant={currentPick == Result.HOME_TEAM ? "contained" : "outlined"}
             onClick={() => handleClick(match.id, Result.HOME_TEAM)}
@@ -62,11 +74,11 @@ const MatchComponent = ({ match, result }: Props) => {
                 className="crest_img"
               />
               <Box>{match.home.name}</Box>
-              <Box>{match.homeWinOdds}</Box>
+              <Box>{match.homeWinOdds / 100}</Box>
             </StyledBox>
           </Button>
         </Box>
-        <Box mx={0.5}>
+        <Box m={1}>
           <Button
             variant={currentPick == Result.DRAW ? "contained" : "outlined"}
             onClick={() => handleClick(match.id, Result.DRAW)}
@@ -74,11 +86,11 @@ const MatchComponent = ({ match, result }: Props) => {
           >
             <StyledBox>
               <Box>Draw</Box>
-              <Box>{match.drawOdds}</Box>
+              <Box>{match.drawOdds / 100}</Box>
             </StyledBox>
           </Button>
         </Box>
-        <Box>
+        <Box m={1}>
           <Button
             variant={currentPick == Result.AWAY_TEAM ? "contained" : "outlined"}
             onClick={() => handleClick(match.id, Result.AWAY_TEAM)}
@@ -92,7 +104,7 @@ const MatchComponent = ({ match, result }: Props) => {
                 className="crest_img"
               />
               <Box>{match.away.name}</Box>
-              <Box>{match.awayWinOdds}</Box>
+              <Box>{match.awayWinOdds / 100}</Box>
             </StyledBox>
           </Button>
         </Box>

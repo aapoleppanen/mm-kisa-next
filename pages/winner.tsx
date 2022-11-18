@@ -1,4 +1,4 @@
-import { Box, Button, Grid } from "@mui/material";
+import { Box, Button, Grid, Paper, useMediaQuery } from "@mui/material";
 import { Team } from "@prisma/client";
 import { GetServerSideProps } from "next";
 import { getSession } from "next-auth/react";
@@ -71,33 +71,32 @@ const Winner = ({ teams, userPick }: Props) => {
   };
 
   return (
-    <Box>
-      <Grid container>
-        {teams.map((team) => (
-          <Grid item key={team.id} m={0.5}>
-            <Button
-              onClick={() => handleClick(team.id)}
-              variant={team.id == picked ? "contained" : "outlined"}
-              fullWidth
-              disabled={disablePrePicks()}
+    <Grid container p={2} justifyContent="center" spacing={1}>
+      {teams.map((team) => (
+        <Grid item key={team.id} xs={12} sm={6} md={3}>
+          <Button
+            onClick={() => handleClick(team.id)}
+            variant={team.id == picked ? "contained" : "outlined"}
+            fullWidth
+            disabled={disablePrePicks()}
+          >
+            <Box
+              display="flex"
+              flexDirection="row"
+              alignItems="center"
+              justifyContent="space-between"
+              width="230px"
+              py={1}
             >
-              <Box
-                display="flex"
-                flexDirection="row"
-                alignItems="center"
-                justifyContent="space-between"
-                width="230px"
-              >
-                <Box mr={1} textAlign="center">
-                  {team.name}
-                </Box>
-                <Box textAlign="center">{team.winningOdds}</Box>
+              <Box mr={1} textAlign="center">
+                {team.name}
               </Box>
-            </Button>
-          </Grid>
-        ))}
-      </Grid>
-    </Box>
+              <Box textAlign="center">{team.winningOdds / 100}</Box>
+            </Box>
+          </Button>
+        </Grid>
+      ))}
+    </Grid>
   );
 };
 

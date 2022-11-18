@@ -1,10 +1,11 @@
-import { Box, Button, Grid } from "@mui/material";
+import { Box, Button, Grid, Paper, useMediaQuery } from "@mui/material";
 import { Player } from "@prisma/client";
 import { GetServerSideProps } from "next";
 import { getSession } from "next-auth/react";
 import { useState } from "react";
 import { disablePrePicks } from "../lib/config";
 import prisma from "../lib/prisma";
+import { theme } from "./_app";
 
 export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
   const session = await getSession({ req });
@@ -71,33 +72,32 @@ const TopScorer = ({ players, userPick }: Props) => {
   };
 
   return (
-    <Box>
-      <Grid container>
-        {players.map((player) => (
-          <Grid item key={player.id} m={0.5}>
-            <Button
-              onClick={() => handleClick(player.id)}
-              variant={player.id == picked ? "contained" : "outlined"}
-              fullWidth
-              disabled={disablePrePicks()}
+    <Grid container p={2} justifyContent="center" spacing={1}>
+      {players.map((player) => (
+        <Grid item key={player.id} xs={12} sm={6} md={3}>
+          <Button
+            onClick={() => handleClick(player.id)}
+            variant={player.id == picked ? "contained" : "outlined"}
+            fullWidth
+            disabled={disablePrePicks()}
+          >
+            <Box
+              display="flex"
+              flexDirection="row"
+              alignItems="center"
+              justifyContent="space-between"
+              width="230px"
+              py={1}
             >
-              <Box
-                display="flex"
-                flexDirection="row"
-                alignItems="center"
-                justifyContent="space-between"
-                width="230px"
-              >
-                <Box mr={1} textAlign="center">
-                  {player.name}
-                </Box>
-                <Box textAlign="center">{player.odds}</Box>
+              <Box mr={1} textAlign="center">
+                {player.name}
               </Box>
-            </Button>
-          </Grid>
-        ))}
-      </Grid>
-    </Box>
+              <Box textAlign="center">{player.odds / 100}</Box>
+            </Box>
+          </Button>
+        </Grid>
+      ))}
+    </Grid>
   );
 };
 

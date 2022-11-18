@@ -17,25 +17,54 @@ const Header = () => {
         display="flex"
         alignItems="center"
         justifyContent="space-between"
-        m={2}
+        p={2}
+        position="fixed"
+        width="100%"
+        bgcolor="white"
+        zIndex={2}
       >
         <Box display="flex" m={1} gap={1}>
           {session && (
             <>
               <Link href="/profile">
-                <a data-active={isActive("/profile")}>Profile</a>
+                <Button
+                  LinkComponent="a"
+                  color={isActive("/profile") ? "secondary" : "primary"}
+                >
+                  Profile
+                </Button>
               </Link>
               <Link href="/matches">
-                <a data-active={isActive("/matches")}>Matches</a>
+                <Button
+                  LinkComponent="a"
+                  color={isActive("/matches") ? "secondary" : "primary"}
+                >
+                  Matches
+                </Button>
               </Link>
               <Link href="/winner">
-                <a data-active={isActive("/winner")}>Winner</a>
+                <Button
+                  LinkComponent="a"
+                  color={isActive("/winner") ? "secondary" : "primary"}
+                >
+                  Winner
+                </Button>
               </Link>
               <Link href="/topScorer">
-                <a data-active={isActive("/topScorer")}>Top Scorer</a>
+                <Button
+                  LinkComponent="a"
+                  color={isActive("/topScorer") ? "secondary" : "primary"}
+                >
+                  Top Scorer
+                </Button>
               </Link>
               <Link href="/leaderboard">
-                <a data-active={isActive("/leaderboard")}>Leaderboard</a>
+                <Button
+                  LinkComponent="a"
+                  color={isActive("/leaderboard") ? "secondary" : "primary"}
+                >
+                  Leaderboard
+                </Button>
               </Link>
             </>
           )}
@@ -57,26 +86,6 @@ const Header = () => {
           )}
         </Box>
       </Box>
-      <style jsx>{`
-        .bold {
-          font-weight: bold;
-        }
-
-        a {
-          text-decoration: none;
-          color: var(--geist-foreground);
-          color: blue;
-          display: inline-block;
-        }
-
-        a[data-active="true"] {
-          color: grey;
-        }
-
-        a + a {
-          margin-left: 1rem;
-        }
-      `}</style>
     </>
   );
 };
