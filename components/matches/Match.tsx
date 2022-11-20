@@ -73,7 +73,12 @@ const MatchComponent = ({ match, result }: Props) => {
                 loading="lazy"
                 className="crest_img"
               />
-              <Box>{match.home.name}</Box>
+              <Box display="flex">
+                {match.home.name}
+                {match.homeGoals != null && (
+                  <Box ml={0.5} fontWeight="bold">{`(${match.homeGoals})`}</Box>
+                )}
+              </Box>
               <Box>{match.homeWinOdds / 100}</Box>
             </StyledBox>
           </Button>
@@ -103,7 +108,12 @@ const MatchComponent = ({ match, result }: Props) => {
                 loading="lazy"
                 className="crest_img"
               />
-              <Box>{match.away.name}</Box>
+              <Box display="flex">
+                {match.away.name}
+                {match.awayGoals != null && (
+                  <Box ml={0.5} fontWeight="bold">{`(${match.awayGoals})`}</Box>
+                )}
+              </Box>
               <Box>{match.awayWinOdds / 100}</Box>
             </StyledBox>
           </Button>

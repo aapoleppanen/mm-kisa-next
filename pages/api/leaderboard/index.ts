@@ -14,18 +14,18 @@ export default async function handle(req, res) {
       await prisma.$queryRaw`
       SELECT SUM(odds) AS total, name, User.id AS id
         FROM (
-          SELECT homeWinOdds AS Odds, id
+          SELECT homeWinOdds AS Odds, id, result
           FROM \`Match\`
           WHERE \`Match\`.result = "HOME_TEAM"
         UNION
-          SELECT awayWinOdds AS Odds, id
+          SELECT awayWinOdds AS Odds, id, result
           FROM \`Match\`
           WHERE \`Match\`.result = "AWAY_TEAM"
         UNION
-          SELECT drawOdds AS Odds, id
+          SELECT drawOdds AS Odds, id, result
           FROM \`Match\`
           WHERE \`Match\`.result = "DRAW") AS od
-      INNER JOIN Pick ON od.id = Pick.matchId
+      INNER JOIN Pick ON od.id = Pick.matchId AND od.result = Pick.pickedResult
       RIGHT JOIN User on User.id = Pick.userId
       GROUP BY User.id
       `;

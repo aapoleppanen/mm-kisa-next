@@ -5,10 +5,11 @@ const PicksOverview = ({ picks }: { picks: UserPicks }) => (
   <Box>
     <Grid container>
       <Grid item xs={12} textAlign="center" p={1}>
-        Winner: {picks.winnerPick?.name} {picks.winnerPick?.winningOdds}
+        Winner: {picks.winnerPick?.name} {picks.winnerPick?.winningOdds / 100}
       </Grid>
       <Grid item xs={12} textAlign="center" p={1}>
-        Top scorer: {picks.topScorerPick?.name} {picks.topScorerPick?.odds}
+        Top scorer: {picks.topScorerPick?.name}{" "}
+        {picks.topScorerPick?.odds / 100}
       </Grid>
     </Grid>
     <Box textAlign="center" fontWeight="bold" p={1}>
@@ -40,19 +41,17 @@ const PicksOverview = ({ picks }: { picks: UserPicks }) => (
           <Box display="flex" alignItems="center">
             <Box
               flex={1}
-              fontWeight={p.pickedResult === p.match.result ? "bold" : "unset"}
+              fontWeight={"HOME_TEAM" === p.match.result ? "bold" : "unset"}
             >
               {p.match.homeWinOdds / 100}
             </Box>
-            <Box
-              fontWeight={p.pickedResult === p.match.result ? "bold" : "unset"}
-            >
+            <Box fontWeight={"DRAW" === p.match.result ? "bold" : "unset"}>
               {p.match.drawOdds / 100}
             </Box>
             <Box
               flex={1}
               textAlign="right"
-              fontWeight={p.pickedResult === p.match.result ? "bold" : "unset"}
+              fontWeight={"AWAY_TEAM" === p.match.result ? "bold" : "unset"}
             >
               {p.match.awayWinOdds / 100}
             </Box>
