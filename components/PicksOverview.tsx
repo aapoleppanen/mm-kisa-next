@@ -5,11 +5,12 @@ const PicksOverview = ({ picks }: { picks: UserPicks }) => (
   <Box>
     <Grid container>
       <Grid item xs={12} textAlign="center" p={1}>
-        Winner: {picks.winnerPick?.name} {picks.winnerPick?.winningOdds / 100}
+        Winner: {picks.winnerPick?.name}{" "}
+        {picks.winnerPick?.winningOdds && picks.winnerPick.winningOdds / 100}
       </Grid>
       <Grid item xs={12} textAlign="center" p={1}>
         Top scorer: {picks.topScorerPick?.name}{" "}
-        {picks.topScorerPick?.odds / 100}
+        {picks.topScorerPick?.odds && picks.topScorerPick.odds / 100}
       </Grid>
     </Grid>
     <Box textAlign="center" fontWeight="bold" p={1}>

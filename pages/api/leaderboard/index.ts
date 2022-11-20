@@ -28,6 +28,7 @@ export default async function handle(req, res) {
       INNER JOIN Pick ON od.id = Pick.matchId AND od.result = Pick.pickedResult
       RIGHT JOIN User on User.id = Pick.userId
       GROUP BY User.id
+      ORDER BY total DESC
       `;
 
     return res.json({
