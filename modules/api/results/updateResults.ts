@@ -40,7 +40,7 @@ export const updateResults = async () => {
             update: {
               awayGoals: match.score.fullTime.away ?? match.score.halfTime.away,
               homeGoals: match.score.fullTime.home ?? match.score.halfTime.home,
-              result: match.score.winner,
+              result: match.score.duration == "REGULAR" ? match.score.winner : "DRAW",
             },
             create: {
               startTime: match.utcDate,
