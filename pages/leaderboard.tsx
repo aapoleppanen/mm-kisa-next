@@ -21,7 +21,7 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
 
   const users: { total: number; name: string; id: string }[] =
   await prisma.$queryRaw`
-SELECT SUM(COALESCE(odds, 0) + COALESCE(winningOdds, 0) + COALESCE(playerOdds, 0)) AS total, User.name as name, User.id AS id, Team.winningOdds, player.playerOdds
+SELECT COALESCE(SUM(odds), 0) + COALESCE(winningOdds, 0) + COALESCE(playerOdds, 0) AS total, User.name as name, User.id AS id
 FROM (
   SELECT homeWinOdds AS Odds, id, result
   FROM \`Match\`
@@ -45,6 +45,8 @@ WHERE Player.id = 95
 GROUP BY User.id
 ORDER BY total DESC
 `;
+
+console.log(users);
 
   return {
     props: { users: JSON.parse(JSON.stringify(users)) },
