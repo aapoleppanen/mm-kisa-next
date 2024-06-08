@@ -1,13 +1,14 @@
-import { getSession } from "next-auth/react";
+import { auth } from "@/auth";
+import { NextApiRequest, NextApiResponse } from "next";
 import { disablePrePicks } from "../../../lib/config";
 import prisma from "../../../lib/prisma";
 
-export default async function handle(req, res) {
+export default async function handle(req: NextApiRequest, res: NextApiResponse) {
   const { playerId } = req.body;
 
-  const session = await getSession({ req });
+  const session = await auth(req, res);
 
-  if (!session.user.id) {
+  if (!session?.user.id) {
     res.statusCode = 403;
     return { error: "Please sign in" };
   }

@@ -1,13 +1,13 @@
-import Link from "next/link";
+import { auth } from "@/auth";
 import { Box, Button } from "@mui/material";
 import { User } from "@prisma/client";
 import { GetServerSideProps } from "next";
 import Image from "next/image";
-import { getSession, useSession } from "next-auth/react";
+import Link from "next/link";
 import prisma from "../../lib/prisma";
 
-export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
-  const session = await getSession({ req });
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const session = await auth(context);
 
   if (!session?.user) {
     return {
@@ -44,9 +44,9 @@ const Profile = ({ user }: Props) => {
       </Link>
       <Box width="250px" height="auto" my={1}>
         <Image
-          src={image}
-          width="100%"
-          height="100%"
+          src={image ?? "/profile.png"}
+          width="250"
+          alt="profile_image"
           layout="responsive"
           objectFit="contain"
         />

@@ -2,7 +2,7 @@ import { Box, Button, Card, Grid, Paper, useMediaQuery } from "@mui/material";
 import { Match, Pick, Result, Team } from "@prisma/client";
 import { isSameDay } from "date-fns";
 import { GetServerSideProps, NextPage } from "next";
-import { getSession } from "next-auth/react";
+import { auth } from "@/auth";
 import useSWR, { Fetcher } from "swr";
 import BottomNav from "../components/BottomNav";
 import Header from "../components/Header";
@@ -11,8 +11,8 @@ import MatchComponent from "../components/matches/Match";
 import prisma from "../lib/prisma";
 import { theme } from "./_app";
 
-export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
-  const session = await getSession({ req });
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const session = await auth(context);
 
   if (!session?.user) {
     return {
@@ -75,7 +75,7 @@ const Matches: NextPage<Props> = ({ matches }) => {
           </Box>
           {matches.map((match) => {
             const result =
-              (match.Pick.length && match.Pick[0].pickedResult) ??
+              (match.Pick?.length && match.Pick[0].pickedResult) ??
               Result.NO_RESULT;
 
             let renderStamp = false;
@@ -132,7 +132,9 @@ const fetcher: Fetcher<LBoard, string> = (path) =>
 
 // @ts-ignore next-line
 Matches.getLayout = function getLayout(page) {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { data, error } = useSWR("/api/leaderboard", fetcher);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const mobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   return (

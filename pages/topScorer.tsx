@@ -6,9 +6,10 @@ import { useState } from "react";
 import { disablePrePicks } from "../lib/config";
 import prisma from "../lib/prisma";
 import { theme } from "./_app";
+import { auth } from "@/auth";
 
-export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
-  const session = await getSession({ req });
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const session = await auth(context);
 
   if (!session?.user) {
     return {
@@ -44,7 +45,7 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
   return {
     props: {
       players: JSON.parse(JSON.stringify(players)),
-      userPick: user.playerId,
+      userPick: user?.playerId,
     },
   };
 };
@@ -55,7 +56,7 @@ type Props = {
 };
 
 const TopScorer = ({ players, userPick }: Props) => {
-  const [picked, setPicked] = useState<number>(userPick);
+  const [picked, setPicked] = useState<number | null>(userPick);
 
   const handleClick = async (playerId: number) => {
     try {

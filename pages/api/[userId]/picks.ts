@@ -1,10 +1,10 @@
-import { unstable_getServerSession } from "next-auth";
+import { auth } from "@/auth";
 import prisma from "../../../lib/prisma";
-import { options } from "../auth2/auth";
+import { NextApiRequest, NextApiResponse } from "next";
 
-export default async function handle(req, res) {
+export default async function handle(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const session = await unstable_getServerSession(req, res, options);
+    const session = await auth(req, res);
 
     if (!session?.user) {
       return res.status(401).send({ message: "unauthorized " });
@@ -14,7 +14,7 @@ export default async function handle(req, res) {
 
     const picks = await prisma.user.findUnique({
       where: {
-        id: userId,
+        id: userId?.toString(),
       },
       include: {
         winnerPick: true,

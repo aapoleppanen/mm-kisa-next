@@ -3,6 +3,7 @@ import { Match, Pick, Result, Team } from "@prisma/client";
 import { format } from "date-fns";
 import { useState } from "react";
 import { disabledToday } from "../../lib/config";
+import Image from "next/image";
 import { theme } from "../../pages/_app";
 
 // display="flex" width="300px" justifyContent="space-between"
@@ -67,7 +68,7 @@ const MatchComponent = ({ match, result }: Props) => {
             disabled={disabledToday(new Date(match.startTime))}
           >
             <StyledBox>
-              <img
+              <Image
                 src={match.home.crest}
                 alt="home_flag"
                 loading="lazy"
@@ -102,7 +103,7 @@ const MatchComponent = ({ match, result }: Props) => {
             disabled={disabledToday(new Date(match.startTime))}
           >
             <StyledBox>
-              <img
+              <Image
                 src={match.away.crest}
                 alt="away_flag"
                 loading="lazy"

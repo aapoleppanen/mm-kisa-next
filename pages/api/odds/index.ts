@@ -1,1 +1,3 @@
-export default async function handle(req, res) {}
+import { NextApiRequest, NextApiResponse } from "next";
+
+export default async function handle(req: NextApiRequest, res: NextApiResponse) {}

@@ -1,13 +1,13 @@
-import { Box, Collapse, Divider, Grid } from "@mui/material";
-import { Match, Player, Team, User, Pick } from "@prisma/client";
+import { auth } from "@/auth";
+import { Box, Collapse, Divider } from "@mui/material";
+import { Match, Pick, Player, Team, User } from "@prisma/client";
 import { GetServerSideProps } from "next";
-import { getSession } from "next-auth/react";
 import { useState } from "react";
 import PicksOverview from "../components/PicksOverview";
 import prisma from "../lib/prisma";
 
-export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
-  const session = await getSession({ req });
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const session = await auth(context);
 
   if (!session?.user) {
     return {
@@ -111,7 +111,7 @@ const LeaderboardPage = ({ users }: Props) => {
           </Box>
           <Divider />
           <Collapse in={selected === user.id && !!picks} unmountOnExit>
-            <PicksOverview picks={picks} />
+            {picks && <PicksOverview picks={picks} />}
           </Collapse>
           {/* {selected === user.id && picks && } */}
         </Box>

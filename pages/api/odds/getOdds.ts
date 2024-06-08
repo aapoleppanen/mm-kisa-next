@@ -2,8 +2,9 @@ import { request } from "graphql-request";
 import { veikkausGraphQlEndpoint } from "../../../lib/config";
 import { euro2024Variables, events } from "./queries";
 import { EventsResponse } from "./types";
+import { NextApiRequest, NextApiResponse } from "next";
 
-export default async function handle(req, res) {
+export default async function handle(req: NextApiRequest, res: NextApiResponse) {
   try {
     const response = await request<EventsResponse>(
       veikkausGraphQlEndpoint,

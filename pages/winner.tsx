@@ -1,13 +1,13 @@
-import { Box, Button, Grid, Paper, useMediaQuery } from "@mui/material";
+import { auth } from "@/auth";
+import { Box, Button, Grid } from "@mui/material";
 import { Team } from "@prisma/client";
 import { GetServerSideProps } from "next";
-import { getSession } from "next-auth/react";
 import { useState } from "react";
 import { disablePrePicks } from "../lib/config";
 import prisma from "../lib/prisma";
 
-export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
-  const session = await getSession({ req });
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const session = await auth(context)
 
   if (!session?.user) {
     return {
@@ -43,7 +43,7 @@ export const getServerSideProps: GetServerSideProps = async ({ req, res }) => {
   return {
     props: {
       teams: JSON.parse(JSON.stringify(teams)),
-      userPick: user.teamId,
+      userPick: user?.teamId,
     },
   };
 };
@@ -54,7 +54,7 @@ type Props = {
 };
 
 const Winner = ({ teams, userPick }: Props) => {
-  const [picked, setPicked] = useState<number>(userPick);
+  const [picked, setPicked] = useState<number | null>(userPick);
 
   const handleClick = async (teamId: number) => {
     try {
