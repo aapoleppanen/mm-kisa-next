@@ -1,6 +1,6 @@
 import { unstable_getServerSession } from "next-auth";
 import prisma from "../../../lib/prisma";
-import { options } from "../auth/[...nextauth]";
+import { options } from "../auth2/auth";
 
 export default async function handle(req, res) {
   try {

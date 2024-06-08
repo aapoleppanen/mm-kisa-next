@@ -2,7 +2,7 @@ import prisma from "../../../lib/prisma";
 
 export const insertTeams = async () => {
   try {
-    const path = "https://api.football-data.org/v4/competitions/WC/teams";
+    const path = "https://api.football-data.org/v4/competitions/EC/teams";
     const response = await fetch(path, {
       headers: { "X-Auth-Token": `${process.env.FD_API_TOKEN}` },
     });

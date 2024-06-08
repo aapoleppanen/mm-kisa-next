@@ -1,20 +1,14 @@
 import { request } from "graphql-request";
 import { veikkausGraphQlEndpoint } from "../../../lib/config";
-import { events } from "./queries";
+import { euro2024Variables, events } from "./queries";
 import { EventsResponse } from "./types";
 
 export default async function handle(req, res) {
   try {
-    const variables = {
-      sportIds: ["1"],
-      ctids: ["1-114-1"],
-      lang: "fi",
-    };
-
     const response = await request<EventsResponse>(
       veikkausGraphQlEndpoint,
       events,
-      variables
+      euro2024Variables
     );
 
     const fixtures = response.sports[0].tournaments[0].events

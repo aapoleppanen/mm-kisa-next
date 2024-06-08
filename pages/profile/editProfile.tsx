@@ -84,7 +84,7 @@ const Profile = ({ user }: Props) => {
       <Box my={2}>Email: {email}</Box>
       <Box display="flex">
         <Box mr={1}>
-          <Link href="/profile" passHref>
+          <Link href="/profile" passHref legacyBehavior>
             <Button variant="contained" color="secondary">
               Cancel
             </Button>

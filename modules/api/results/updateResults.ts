@@ -3,7 +3,7 @@ import { Match } from "../../../pages/api/results/types";
 
 export const updateResults = async () => {
   try {
-    const path = "https://api.football-data.org/v4/competitions/WC/matches";
+    const path = "https://api.football-data.org/v4/competitions/EC/matches";
     const response = await fetch(path, {
       headers: { "X-Auth-Token": `${process.env.FD_API_TOKEN}` },
     });

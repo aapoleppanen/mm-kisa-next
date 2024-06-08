@@ -1,7 +1,7 @@
 import request from "graphql-request";
 import { veikkausGraphQlEndpoint } from "../../../lib/config";
 import prisma from "../../../lib/prisma";
-import { events } from "../../../pages/api/odds/queries";
+import { euro2024Variables, events } from "../../../pages/api/odds/queries";
 import { EventsResponse } from "../../../pages/api/odds/types";
 import { VeikkausFDWorldCupTeamMap } from "../../../utils/adapterUtils";
 
@@ -10,15 +10,11 @@ export const updateTeamOdds = async () => {
     const response = await request<EventsResponse>(
       veikkausGraphQlEndpoint,
       events,
-      {
-        sportIds: ["1"],
-        ctids: ["1-114-1"],
-        lang: "fi",
-      }
+      euro2024Variables
     );
 
     response.sports[0].tournaments[0].events.forEach(async (event) => {
-      if (event.name == "MM-kisat 2022 - Voittaja") {
+      if (event.name == "Euro 2024 - Mestari") {
         event.ebetDraws[0].row.competitors.forEach(async (comp) => {
           const res = await prisma.team.update({
             where: {

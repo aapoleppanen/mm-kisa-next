@@ -24,7 +24,10 @@ interface Event {
     | "MM-kisat - Lohko F - Voittaja"
     | "MM-kisat - Lohko G - Voittaja"
     | "MM-kisat - Lohko H - Voittaja"
-    | "MM-kisat 2022 - Paras maalintekijä";
+    | "MM-kisat 2022 - Paras maalintekijä"
+    | "Euro 2024 - Paras maalintekijä"
+    | "Euro 2024 - Mestari";
+
   date: number; // UNIX epoch
   status: string | "NotStarted";
   homeTeamId: string;

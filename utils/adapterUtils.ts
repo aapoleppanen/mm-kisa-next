@@ -1,3 +1,58 @@
+export const VeikkausFDEuroTeamMap: Record<string, string> = {
+  Albania: "Albania",
+  Itävalta: "Austria",
+  Belgia: "Belgium",
+  Kroatia: "Croatia",
+  Tshekki: "Czechia",
+  Tanska: "Denmark",
+  Englanti: "England",
+  Ranska: "France",
+  Georgia: "Georgia",
+  Saksa: "Germany",
+  Unkari: "Hungary",
+  Italia: "Italy",
+  Hollanti: "Netherlands",
+  Puola: "Poland",
+  Portugali: "Portugal",
+  Romania: "Romania",
+  Skotlanti: "Scotland",
+  Serbia: "Serbia",
+  Slovakia: "Slovakia",
+  Slovenia: "Slovenia",
+  Espanja: "Spain",
+  Sveitsi: "Switzerland",
+  Turkki: "Turkey",
+  Ukraina: "Ukraine"
+};
+
+export const FDVeikkausEuroteamMap: Record<string, string> = {
+  Albania: "Albania",
+  Austria: "Itävalta",
+  Belgium: "Belgia",
+  Croatia: "Kroatia",
+  Czechia: "Tshekki",
+  Denmark: "Tanska",
+  England: "Englanti",
+  France: "Ranska",
+  Georgia: "Georgia",
+  Germany: "Saksa",
+  Hungary: "Unkari",
+  Italy: "Italia",
+  Netherlands: "Hollanti",
+  Poland: "Puola",
+  Portugal: "Portugali",
+  Romania: "Romania",
+  Scotland: "Skotlanti",
+  Serbia: "Serbia",
+  Slovakia: "Slovakia",
+  Slovenia: "Slovenia",
+  Spain: "Espanja",
+  Switzerland: "Sveitsi",
+  Turkey: "Turkki",
+  Ukraine: "Ukraina"
+};
+
+
 export const FDVeikkausPremierLeagueTeamNameMap: Record<string, string> = {
   "AFC Bournemouth": "Bournemouth",
   "Arsenal FC": "Arsenal",

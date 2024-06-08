@@ -39,7 +39,7 @@ const Profile = ({ user }: Props) => {
 
   return (
     <Box m={1}>
-      <Link href="/profile/editProfile" passHref>
+      <Link href="/profile/editProfile" passHref legacyBehavior>
         <Button variant="contained">Edit profile</Button>
       </Link>
       <Box width="250px" height="auto" my={1}>

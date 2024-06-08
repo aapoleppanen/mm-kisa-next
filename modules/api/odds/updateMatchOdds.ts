@@ -1,20 +1,21 @@
 import request from "graphql-request";
 import { veikkausGraphQlEndpoint } from "../../../lib/config";
 import prisma from "../../../lib/prisma";
-import { events } from "../../../pages/api/odds/queries";
+import { euro2024Variables, events } from "../../../pages/api/odds/queries";
 import { EventsResponse } from "../../../pages/api/odds/types";
-import { VeikkausFDWorldCupTeamMap } from "../../../utils/adapterUtils";
+import {
+  VeikkausFDEuroTeamMap,
+  VeikkausFDWorldCupTeamMap,
+} from "../../../utils/adapterUtils";
+
+const VeikkausFDTeamMap = VeikkausFDEuroTeamMap; // VeikkausFDWorldCupTeamMap
 
 export const updateMatchOdds = async () => {
   try {
     const response = await request<EventsResponse>(
       veikkausGraphQlEndpoint,
       events,
-      {
-        sportIds: ["1"],
-        ctids: ["1-114-1"],
-        lang: "fi",
-      }
+      euro2024Variables
     );
 
     response.sports[0].tournaments[0].events
@@ -25,9 +26,9 @@ export const updateMatchOdds = async () => {
         event.ebetDraws.forEach(async (draw) => {
           if (draw.row.description == "1X2") {
             const homeTeamName =
-              VeikkausFDWorldCupTeamMap[draw.row.competitors[0].name];
+              VeikkausFDTeamMap[draw.row.competitors[0].name];
             const awayTeamName =
-              VeikkausFDWorldCupTeamMap[draw.row.competitors[2].name];
+              VeikkausFDTeamMap[draw.row.competitors[2].name];
             const homeTeamOdds = draw.row.competitors[0].odds;
             const awayTeamOdds = draw.row.competitors[2].odds;
             const drawOdds = draw.row.competitors[1].odds;

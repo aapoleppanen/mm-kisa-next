@@ -6,6 +6,8 @@ export const veikkausGraphQlEndpoint =
 export const startDate = new Date("2022-11-20T15:00:00Z");
 // export const startDate = new Date("2022-11-17T15:00:00Z");
 
+export const euro2024startDate = new Date("2024-06-14T19:00:00Z");
+
 export const disablePrePicks = () => isBefore(startDate, new Date());
 
 export const disabledToday = (date: Date) => {
