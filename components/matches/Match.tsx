@@ -73,6 +73,8 @@ const MatchComponent = ({ match, result }: Props) => {
                 alt="home_flag"
                 loading="lazy"
                 className="crest_img"
+                layout="fill"
+                objectFit="contain"
               />
               <Box display="flex">
                 {match.home.name}
@@ -108,6 +110,8 @@ const MatchComponent = ({ match, result }: Props) => {
                 alt="away_flag"
                 loading="lazy"
                 className="crest_img"
+                layout="fill"
+                objectFit="contain"
               />
               <Box display="flex">
                 {match.away.name}

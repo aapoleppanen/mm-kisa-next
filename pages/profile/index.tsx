@@ -46,6 +46,7 @@ const Profile = ({ user }: Props) => {
         <Image
           src={image ?? "/profile.png"}
           width="250"
+          height="250"
           alt="profile_image"
           layout="responsive"
           objectFit="contain"

@@ -14,6 +14,8 @@ export const updatePlayerOdds = async () => {
 
     response.sports[0].tournaments[0].events.forEach(async (event) => {
       if (event.name == "Euro 2024 - Paras maalintekijä") {
+        console.log(event)
+
         event.ebetDraws[0].row.competitors.forEach(async (player) => {
           const res = await prisma.player.upsert({
             where: {
