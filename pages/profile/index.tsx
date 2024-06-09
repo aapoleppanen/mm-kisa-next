@@ -43,14 +43,14 @@ const Profile = ({ user }: Props) => {
         <Button variant="contained">Edit profile</Button>
       </Link>
       <Box width="250px" height="auto" my={1}>
-        <Image
-          src={image ?? "/profile.png"}
+        {image && <Image
+          src={image}
           width="250"
           height="250"
           alt="profile_image"
           layout="responsive"
           objectFit="contain"
-        />
+        />}
       </Box>
       <Box my={1}>Name: {name}</Box>
       <Box my={1}>Email: {email}</Box>

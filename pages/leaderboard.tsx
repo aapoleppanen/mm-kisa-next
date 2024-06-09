@@ -5,6 +5,7 @@ import { GetServerSideProps } from "next";
 import { useState } from "react";
 import PicksOverview from "../components/PicksOverview";
 import prisma from "../lib/prisma";
+import Image from "next/image";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await auth(context);
@@ -19,9 +20,14 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     };
   }
 
-  const users: { total: number; name: string; id: string }[] =
-  await prisma.$queryRaw`
-  SELECT CAST(COALESCE(SUM(odds), 0) + COALESCE("Team"."winningOdds", 0) + COALESCE(playerOdds, 0) AS INTEGER) AS total, "User".name as name, "User".id AS id
+  const users: {
+    total: number;
+    name: User["name"];
+    id: User["id"];
+    image: User["image"];
+  }[] = await prisma.$queryRaw`
+  SELECT CAST(COALESCE(SUM(odds), 0) + COALESCE("Team"."winningOdds", 0) + COALESCE(playerOdds, 0) AS INTEGER) AS total,
+  "User".name as name, "User".id AS id, "User".image as image
   FROM (
     SELECT "homeWinOdds" AS Odds, id, result
     FROM "Match"
@@ -46,15 +52,13 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   ORDER BY total DESC;
 `;
 
-console.log(users);
-
   return {
     props: { users: JSON.parse(JSON.stringify(users)) },
   };
 };
 
 type Props = {
-  users?: { total: number; name: string; id: string }[];
+  users?: { total: number; name: string; id: string; image: string }[];
 };
 
 export type UserPicks = User & {
@@ -107,8 +111,24 @@ const LeaderboardPage = ({ users }: Props) => {
           p={1}
           onClick={() => handleExpand(user.id)}
         >
-          <Box display="flex" justifyContent="space-between" mt={0.5} p={1}>
-            <Box>{user.name}</Box>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            mt={0.5}
+            p={1}
+            alignItems="center"
+          >
+            <Box display="flex" alignItems="center" gap={1}>
+              {user.image && (
+                <Image
+                  src={user.image}
+                  alt="profile_image"
+                  width={45}
+                  height={45}
+                />
+              )}
+              <Box>{user.name}</Box>
+            </Box>
             <Box>{user.total ?? 0}</Box>
           </Box>
           <Divider />

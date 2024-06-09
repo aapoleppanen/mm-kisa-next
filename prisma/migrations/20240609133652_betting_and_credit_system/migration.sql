@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "Pick" ADD COLUMN     "betAmount" INTEGER NOT NULL DEFAULT 0;
+
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "credits" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "points" INTEGER NOT NULL DEFAULT 0;
