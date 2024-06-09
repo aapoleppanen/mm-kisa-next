@@ -19,46 +19,74 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       props: {},
     };
   }
-
   const users: {
     total: number;
     name: User["name"];
     id: User["id"];
     image: User["image"];
+    credits: User["credits"];
+    points: User["points"];
+    winnings: number;
+    remainingCredits: number;
   }[] = await prisma.$queryRaw`
-  SELECT CAST(COALESCE(SUM(odds), 0) + COALESCE("Team"."winningOdds", 0) + COALESCE(playerOdds, 0) AS INTEGER) AS total,
-  "User".name as name, "User".id AS id, "User".image as image
-  FROM (
-    SELECT "homeWinOdds" AS Odds, id, result
-    FROM "Match"
-    WHERE "Match".result = 'HOME_TEAM'
-  UNION
-    SELECT "awayWinOdds" AS Odds, id, result
-    FROM "Match"
-    WHERE "Match".result = 'AWAY_TEAM'
-  UNION
-    SELECT "drawOdds" AS Odds, id, result
-    FROM "Match"
-    WHERE "Match".result = 'DRAW') AS od
-  INNER JOIN "Pick" ON od.id = "Pick"."matchId" AND od.result = "Pick"."pickedResult"
-  RIGHT JOIN "User" on "User".id = "Pick"."userId"
-  LEFT JOIN "Team" on "Team".id = "User"."teamId" AND "Team".id = 4
-  LEFT JOIN (
-  SELECT id, odds as playerOdds, name
-  FROM "Player"
-  WHERE "Player".id = 95
-  ) as player on player.id = "User"."playerId" AND player.id = 95
-  GROUP BY "User".id, "User".name, "Team"."winningOdds", playerOdds
-  ORDER BY total DESC;
-`;
+    WITH bet_amounts AS (
+      SELECT "User".id AS userId, CAST(COALESCE(SUM("Pick"."betAmount"), 0) AS INTEGER) AS totalBetAmount
+      FROM "User"
+      LEFT JOIN "Pick" ON "User".id = "Pick"."userId"
+      GROUP BY "User".id
+    )
+    SELECT
+      CAST(COALESCE(SUM(odds), 0) + COALESCE("Team"."winningOdds", 0) + COALESCE(playerOdds, 0) AS INTEGER) AS total,
+      "User".name as name, "User".id AS id, "User".image as image, "User".credits as credits, "User".points as points,
+      CAST(COALESCE(SUM("Pick"."betAmount" * odds), 0) AS INTEGER) AS winnings,
+      "User".credits - CAST(COALESCE(totalBetAmount, 0) AS INTEGER) AS remainingCredits
+    FROM (
+      SELECT "homeWinOdds" AS odds, id, result
+      FROM "Match"
+      WHERE "Match".result = 'HOME_TEAM'
+    UNION
+      SELECT "awayWinOdds" AS odds, id, result
+      FROM "Match"
+      WHERE "Match".result = 'AWAY_TEAM'
+    UNION
+      SELECT "drawOdds" AS odds, id, result
+      FROM "Match"
+      WHERE "Match".result = 'DRAW'
+    ) AS od
+    INNER JOIN "Pick" ON od.id = "Pick"."matchId" AND od.result = "Pick"."pickedResult"
+    RIGHT JOIN "User" ON "User".id = "Pick"."userId"
+    LEFT JOIN "Team" ON "Team".id = "User"."teamId" AND "Team".id = 4
+    LEFT JOIN (
+      SELECT id, odds as playerOdds, name
+      FROM "Player"
+      WHERE "Player".id = 95
+    ) AS player ON player.id = "User"."playerId" AND player.id = 95
+    LEFT JOIN bet_amounts ON bet_amounts.userId = "User".id
+    GROUP BY "User".id, "User".name, "Team"."winningOdds", playerOdds, totalBetAmount
+    ORDER BY total DESC;
+  `;
+
+
+  console.log(users)
 
   return {
     props: { users: JSON.parse(JSON.stringify(users)) },
   };
 };
 
+export type LeaderBoardUser = {
+  total: number;
+  name: string;
+  id: string;
+  image: string;
+  credits: number;
+  points: number;
+  winnings: number;
+  remainingcredits: number;
+};
+
 type Props = {
-  users?: { total: number; name: string; id: string; image: string }[];
+  users?: LeaderBoardUser[];
 };
 
 export type UserPicks = User & {
@@ -129,11 +157,11 @@ const LeaderboardPage = ({ users }: Props) => {
               )}
               <Box>{user.name}</Box>
             </Box>
-            <Box>{user.total ?? 0}</Box>
+            <Box>{user.winnings ?? 0}</Box>
           </Box>
           <Divider />
           <Collapse in={selected === user.id && !!picks} unmountOnExit>
-            {picks && <PicksOverview picks={picks} />}
+            {picks && <PicksOverview picks={picks} user={user} />}
           </Collapse>
           {/* {selected === user.id && picks && } */}
         </Box>

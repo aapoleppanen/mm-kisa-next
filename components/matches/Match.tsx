@@ -1,12 +1,18 @@
-import { Box, Button, Grid, styled, useMediaQuery } from "@mui/material";
-import { Match, Pick, Result, Team } from "@prisma/client";
+import {
+  Box,
+  Button,
+  Grid,
+  TextField,
+  styled,
+  useMediaQuery,
+} from "@mui/material";
+import { Match, Result, Team } from "@prisma/client";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { disabledToday } from "../../lib/config";
 import Image from "next/image";
+import ClearIcon from "@mui/icons-material/Clear";
 import { theme } from "../../pages/_app";
-
-// display="flex" width="300px" justifyContent="space-between"
 
 const StyledBox = styled(Box)(() => ({
   width: "300px",
@@ -23,25 +29,60 @@ type Props = {
     home: Team;
   };
   result: Result | "";
+  betAmount: number;
 };
 
-const MatchComponent = ({ match, result }: Props) => {
+const MatchComponent = ({
+  match,
+  result,
+  betAmount: initialBetAmount,
+}: Props) => {
   const mobile = useMediaQuery(theme.breakpoints.down("lg"));
-  const handleClick = async (matchId: number, result: Result) => {
-    try {
-      setCurrentPick(result);
-      const res = await fetch("/api/pick", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ matchId, result }),
-      });
-    } catch (e) {
-      setCurrentPick(result);
-      console.error(e);
-    }
-  };
 
   const [currentPick, setCurrentPick] = useState<Result | "">(result);
+  const [betAmount, setBetAmount] = useState<number | "">(initialBetAmount);
+  const [potentialWin, setPotentialWin] = useState<number>(0);
+
+  useEffect(() => {
+    if (!betAmount) {
+      setPotentialWin(0);
+      return;
+    }
+
+    setPotentialWin(
+      (betAmount *
+        match[
+          currentPick == Result.HOME_TEAM
+            ? "homeWinOdds"
+            : currentPick == Result.DRAW
+            ? "drawOdds"
+            : "awayWinOdds"
+        ]) /
+        100
+    );
+  }, [betAmount, currentPick, match]);
+
+  useEffect(() => {
+    const makeApiCall = async () => {
+      if (currentPick && betAmount) {
+        try {
+          await fetch("/api/pick", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              matchId: match.id,
+              result: currentPick,
+              betAmount,
+            }),
+          });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    };
+
+    makeApiCall();
+  }, [match.id, currentPick, betAmount]);
 
   return (
     <Box
@@ -64,7 +105,7 @@ const MatchComponent = ({ match, result }: Props) => {
         <Box m={1}>
           <Button
             variant={currentPick == Result.HOME_TEAM ? "contained" : "outlined"}
-            onClick={() => handleClick(match.id, Result.HOME_TEAM)}
+            onClick={() => setCurrentPick(Result.HOME_TEAM)}
             disabled={disabledToday(new Date(match.startTime))}
           >
             <StyledBox>
@@ -89,7 +130,7 @@ const MatchComponent = ({ match, result }: Props) => {
         <Box m={1}>
           <Button
             variant={currentPick == Result.DRAW ? "contained" : "outlined"}
-            onClick={() => handleClick(match.id, Result.DRAW)}
+            onClick={() => setCurrentPick(Result.DRAW)}
             disabled={disabledToday(new Date(match.startTime))}
           >
             <StyledBox>
@@ -101,7 +142,7 @@ const MatchComponent = ({ match, result }: Props) => {
         <Box m={1}>
           <Button
             variant={currentPick == Result.AWAY_TEAM ? "contained" : "outlined"}
-            onClick={() => handleClick(match.id, Result.AWAY_TEAM)}
+            onClick={() => setCurrentPick(Result.AWAY_TEAM)}
             disabled={disabledToday(new Date(match.startTime))}
           >
             <StyledBox>
@@ -121,6 +162,58 @@ const MatchComponent = ({ match, result }: Props) => {
               </Box>
               <Box>{match.awayWinOdds / 100}</Box>
             </StyledBox>
+          </Button>
+        </Box>
+      </Grid>
+      <Grid
+        item
+        mb={2}
+        mt={1}
+        ml={1}
+        display="flex"
+        justifyContent="flex-start"
+        alignItems={"center"}
+        xs={12}
+        width="100%"
+      >
+        <Box m={0.5}>
+          <TextField
+            label="Bet Amount"
+            value={betAmount}
+            type="number"
+            size="small"
+            sx={{
+              width: "260px",
+            }}
+            inputProps={{ step: "0.01" }}
+            InputProps={{
+              endAdornment: (
+                <Box
+                  color="gray"
+                  ml={1}
+                  width="min-content"
+                  sx={{ textWrap: "nowrap" }}
+                >
+                  = {potentialWin.toFixed(2)} points
+                </Box>
+              ),
+            }}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+              setBetAmount(event.target.value && Number(event.target.value));
+            }}
+            onBlur={() => setBetAmount(betAmount || 0)}
+            disabled={disabledToday(new Date(match.startTime))}
+          />
+        </Box>
+        <Box m={0.5} alignItems={"center"} display="flex">
+          <Button
+            variant="text"
+            onClick={() => {
+              setBetAmount(0);
+            }}
+            disabled={disabledToday(new Date(match.startTime))}
+          >
+            Clear
           </Button>
         </Box>
       </Grid>

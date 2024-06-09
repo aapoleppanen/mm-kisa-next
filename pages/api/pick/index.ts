@@ -4,7 +4,7 @@ import { disabledToday } from "../../../lib/config";
 import prisma from "../../../lib/prisma";
 
 export default async function handle(req: NextApiRequest, res: NextApiResponse) {
-  const { matchId, result } = req.body;
+  const { matchId, result, betAmount } = req.body;
 
   const session = await auth(req, res);
 
@@ -40,6 +40,7 @@ export default async function handle(req: NextApiRequest, res: NextApiResponse) 
       },
       data: {
         pickedResult: result,
+        betAmount
       },
     });
     res.json(opResult);
@@ -49,6 +50,7 @@ export default async function handle(req: NextApiRequest, res: NextApiResponse) 
         matchId,
         userId: session.user.id,
         pickedResult: result,
+        betAmount
       },
     });
     res.json(opResult);

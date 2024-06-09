@@ -1,14 +1,46 @@
 import { Box, Divider, Grid } from "@mui/material";
-import { UserPicks } from "../pages/leaderboard";
+import { LeaderBoardUser, UserPicks } from "../pages/leaderboard";
 
-const PicksOverview = ({ picks }: { picks: UserPicks }) => (
+const PicksOverview = ({
+  picks,
+  user,
+}: {
+  picks: UserPicks;
+  user: LeaderBoardUser;
+}) => (
   <Box>
     <Grid container>
-      <Grid item xs={12} textAlign="center" p={1} fontWeight={picks.winnerPick?.id === 4 ? "bold" : "unset"}>
+      <Grid item xs={6} textAlign="center" p={1}>
+        <Box fontSize={36} fontWeight={"bold"}>
+          {user.remainingcredits}
+        </Box>
+        <Box>Credits</Box>
+      </Grid>
+      <Grid item xs={6} textAlign="center" p={1}>
+        <Box fontSize={36} fontWeight={"bold"}>
+          {user.winnings}
+        </Box>
+        <Box>Points</Box>
+      </Grid>
+    </Grid>
+    <Grid container>
+      <Grid
+        item
+        xs={12}
+        textAlign="center"
+        p={1}
+        fontWeight={picks.winnerPick?.id === 4 ? "bold" : "unset"}
+      >
         Winner: {picks.winnerPick?.name}{" "}
         {picks.winnerPick?.winningOdds && picks.winnerPick.winningOdds / 100}
       </Grid>
-      <Grid item xs={12} textAlign="center" p={1} fontWeight={picks.topScorerPick?.id === 95 ? "bold" : "unset"}>
+      <Grid
+        item
+        xs={12}
+        textAlign="center"
+        p={1}
+        fontWeight={picks.topScorerPick?.id === 95 ? "bold" : "unset"}
+      >
         Top scorer: {picks.topScorerPick?.name}{" "}
         {picks.topScorerPick?.odds && picks.topScorerPick.odds / 100}
       </Grid>

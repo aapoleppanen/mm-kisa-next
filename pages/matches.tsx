@@ -78,6 +78,9 @@ const Matches: NextPage<Props> = ({ matches }) => {
               (match.Pick?.length && match.Pick[0].pickedResult) ??
               Result.NO_RESULT;
 
+            const betAmount =
+              (match.Pick?.length && match.Pick[0].betAmount) ?? 0;
+
             let renderStamp = false;
             const startDate = new Date(match.startTime);
             if (!isSameDay(startDate, lastDate)) {
@@ -104,7 +107,11 @@ const Matches: NextPage<Props> = ({ matches }) => {
                     <Box typography="h4">{startDate.toDateString()}</Box>
                   </Box>
                 )}
-                <MatchComponent match={match} result={result} />
+                <MatchComponent
+                  match={match}
+                  result={result}
+                  betAmount={betAmount}
+                />
               </Box>
             );
           })}
