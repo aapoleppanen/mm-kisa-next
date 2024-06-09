@@ -3,10 +3,11 @@ import { User } from "@prisma/client";
 import { GetServerSideProps } from "next";
 import Image from "next/image";
 import prisma from "../../lib/prisma";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { auth } from "@/auth";
+import Avatar from "@/components/profile/avatar";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await auth(context);
@@ -41,7 +42,9 @@ const Profile = ({ user }: Props) => {
 
   const { email, image, name } = user;
 
-  const [newName, setNewName] = useState("");
+  const [newName, setNewName] = useState(name);
+
+  const [avatar_url, setAvatarUrl] = useState<string | null>(image);
 
   if (!user) return <>Not signed in</>;
 
@@ -50,7 +53,7 @@ const Profile = ({ user }: Props) => {
       const res = await fetch("/api/profile/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newName }),
+        body: JSON.stringify({ newName, avatar_url }),
       });
       router.push("/profile");
     } catch (e) {
@@ -61,14 +64,15 @@ const Profile = ({ user }: Props) => {
   return (
     <Box m={1}>
       <Box width="250px" height="auto" my={1}>
-        <Image
-          src={image || ""}
-          width="250"
-          height="250"
-          layout="responsive"
-          objectFit="contain"
-          alt="profile_image"
-        />
+      <Avatar
+      uid={user?.id ?? null}
+      url={avatar_url}
+      size={150}
+      onUpload={(url) => {
+        console.log(url)
+        setAvatarUrl(url)
+      }}
+    />
       </Box>
       <Box display="flex" alignItems="center" my={2}>
         <Box my={1} mr={1}>

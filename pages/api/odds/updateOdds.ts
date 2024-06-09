@@ -5,9 +5,12 @@ import { updateTeamOdds } from "../../../modules/api/odds/updateTeamOdds";
 import { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handle(req: NextApiRequest, res: NextApiResponse) {
-  if (!disablePrePicks) {
+  if (!disablePrePicks()) {
     const team = await updateTeamOdds();
     const player = await updatePlayerOdds();
+    const match = await updateMatchOdds();
+
+    res.json({ team, player, match });
   }
   const match = await updateMatchOdds();
   res.json({ match });

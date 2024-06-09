@@ -19,6 +19,8 @@
     "@mui/material": "^5.15.19",
     "@prisma/client": "^5.15.0",
     "@prisma/extension-accelerate": "^1.1.0",
+    "@supabase/ssr": "^0.3.0",
+    "@supabase/supabase-js": "^2.43.4",
     "date-fns": "^3.6.0",
     "graphql-request": "^7.0.1",
     "next": "^14.2.3",

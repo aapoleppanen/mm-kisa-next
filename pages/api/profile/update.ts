@@ -4,7 +4,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { auth } from "@/auth";
 
 export default async function handle(req: NextApiRequest, res: NextApiResponse) {
-  const { newName } = req.body;
+  const { newName, avatar_url } = req.body;
 
   const session = await auth(req, res)
 
@@ -19,6 +19,7 @@ export default async function handle(req: NextApiRequest, res: NextApiResponse) 
     },
     data: {
       name: newName,
+      image: avatar_url,
     },
   });
   res.json(result);
