@@ -1,21 +1,12 @@
 // schema.prisma
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 generator client {
   provider = "prisma-client-js"
-}
-
-model Post {
-  id        String  @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean @default(false)
-  author    User?   @relation("userPosts", fields: [authorId], references: [id])
-  authorId  String?
 }
 
 model Team {
@@ -65,8 +56,9 @@ model Pick {
   userId       String
   user         User    @relation(name: "userPicks", fields: [userId], references: [id])
   pickedResult Result? // "AWAY | "HOME" | "DRAW" // this is the picked result of the user
-  // TODO: update to be float
-  betAmount    Int     @default(0)
+  betAmount    Float   @default(0) @db.Real
+
+  @@index([userId, matchId])
 }
 
 model Account {
@@ -104,7 +96,6 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
-  posts         Post[]    @relation("userPosts")
   picks         Pick[]    @relation("userPicks")
   winnerPick    Team?     @relation(fields: [teamId], references: [id])
   topScorerPick Player?   @relation(fields: [playerId], references: [id])
@@ -112,11 +103,11 @@ model User {
   sessions      Session[]
   teamId        Int?
   playerId      Int?
-  // TODO: update to be float
-  // TODO: update so that these are calculated in a better way
-  // TODO: in order to update the leaderboard horror sql query
-  credits      Int      @default(0)
-  points       Int      @default(0)
+  credits       Float     @default(0) @db.Real
+  remainingCredits Float  @default(0) @db.Real
+  points        Float     @default(0) @db.Real
+
+  @@index([id])
 }
 
 model VerificationToken {

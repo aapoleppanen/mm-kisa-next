@@ -29,17 +29,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     winnings: number;
     remainingCredits: number;
   }[] = await prisma.$queryRaw`
-    WITH bet_amounts AS (
-      SELECT "User".id AS userId, CAST(COALESCE(SUM("Pick"."betAmount"), 0) AS INTEGER) AS totalBetAmount
-      FROM "User"
-      LEFT JOIN "Pick" ON "User".id = "Pick"."userId"
-      GROUP BY "User".id
-    )
     SELECT
       CAST(COALESCE(SUM(odds), 0) + COALESCE("Team"."winningOdds", 0) + COALESCE(playerOdds, 0) AS INTEGER) AS total,
       "User".name as name, "User".id AS id, "User".image as image, "User".credits as credits, "User".points as points,
       CAST(COALESCE(SUM("Pick"."betAmount" * odds), 0) AS INTEGER) AS winnings,
-      "User".credits - CAST(COALESCE(totalBetAmount, 0) AS INTEGER) AS remainingCredits
+      "User"."remainingCredits" as remainingCredits
     FROM (
       SELECT "homeWinOdds" AS odds, id, result
       FROM "Match"
@@ -61,13 +55,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       FROM "Player"
       WHERE "Player".id = 95
     ) AS player ON player.id = "User"."playerId" AND player.id = 95
-    LEFT JOIN bet_amounts ON bet_amounts.userId = "User".id
-    GROUP BY "User".id, "User".name, "Team"."winningOdds", playerOdds, totalBetAmount
+    GROUP BY "User".id, "User".name, "Team"."winningOdds", playerOdds
     ORDER BY total DESC;
   `;
-
-
-  console.log(users)
 
   return {
     props: { users: JSON.parse(JSON.stringify(users)) },
@@ -157,7 +147,7 @@ const LeaderboardPage = ({ users }: Props) => {
               )}
               <Box>{user.name}</Box>
             </Box>
-            <Box>{user.winnings ?? 0}</Box>
+            <Box>{user.winnings / 100 ?? 0}</Box>
           </Box>
           <Divider />
           <Collapse in={selected === user.id && !!picks} unmountOnExit>
