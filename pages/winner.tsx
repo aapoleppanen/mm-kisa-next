@@ -71,8 +71,8 @@ const Winner = ({ teams, userPick }: Props) => {
   };
 
   return (
-    <Grid container p={2} justifyContent="center" spacing={1}>
-      {teams.map((team) => (
+    <Grid container p={2} spacing={1}>
+      {teams.filter(team => team.winningOdds > 0).map((team) => (
         <Grid item key={team.id} xs={12} sm={6} md={3}>
           <Button
             onClick={() => handleClick(team.id)}

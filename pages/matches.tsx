@@ -130,43 +130,43 @@ const Matches: NextPage<Props> = ({ matches }) => {
   );
 };
 
-type LBoard = {
-  users: { total: number; name: string; id: string }[];
-};
+// type LBoard = {
+//   users: { total: number; name: string; id: string }[];
+// };
 
-const fetcher: Fetcher<LBoard, string> = (path) =>
-  fetch(path).then((res) => res.json());
+// const fetcher: Fetcher<LBoard, string> = (path) =>
+//   fetch(path).then((res) => res.json());
 
-// @ts-ignore next-line
-Matches.getLayout = function getLayout(page) {
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const { data, error } = useSWR("/api/leaderboard", fetcher);
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const mobile = useMediaQuery(theme.breakpoints.down("sm"));
+// // @ts-ignore next-line
+// Matches.getLayout = function getLayout(page) {
+//   // eslint-disable-next-line react-hooks/rules-of-hooks
+//   const { data, error } = useSWR("/api/leaderboard", fetcher);
+//   // eslint-disable-next-line react-hooks/rules-of-hooks
+//   const mobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  return (
-    <Box>
-      {!mobile && <Header />}
-      <Box display="flex">
-        <Box
-          height="100vh"
-          overflow="scroll"
-          pt={mobile ? 0 : 10}
-          pb={mobile ? 10 : 4}
-          px={2}
-          flexGrow={1}
-        >
-          {page}
-        </Box>
-        {!mobile && data && (
-          <Box height="100vh" overflow="scroll" pt={10} pb={4} px={4}>
-            <Leaderboard users={data.users} />
-          </Box>
-        )}
-      </Box>
-      {mobile && <BottomNav />}
-    </Box>
-  );
-};
+//   return (
+//     <Box>
+//       {!mobile && <Header />}
+//       <Box display="flex">
+//         <Box
+//           height="100vh"
+//           overflow="scroll"
+//           pt={mobile ? 0 : 10}
+//           pb={mobile ? 10 : 4}
+//           px={2}
+//           flexGrow={1}
+//         >
+//           {page}
+//         </Box>
+//         {!mobile && data && (
+//           <Box height="100vh" overflow="scroll" pt={10} pb={4} px={4}>
+//             <Leaderboard users={data.users} />
+//           </Box>
+//         )}
+//       </Box>
+//       {mobile && <BottomNav />}
+//     </Box>
+//   );
+// };
 
 export default Matches;

@@ -3,15 +3,15 @@ import {
   Button,
   Grid,
   TextField,
+  debounce,
   styled,
   useMediaQuery,
 } from "@mui/material";
 import { Match, Result, Team } from "@prisma/client";
 import { format } from "date-fns";
-import { useEffect, useState } from "react";
-import { disabledToday } from "../../lib/config";
 import Image from "next/image";
-import ClearIcon from "@mui/icons-material/Clear";
+import { useEffect, useRef, useState } from "react";
+import { disabledToday } from "../../lib/config";
 import { theme } from "../../pages/_app";
 
 const StyledBox = styled(Box)(() => ({
@@ -40,8 +40,11 @@ const MatchComponent = ({
   const mobile = useMediaQuery(theme.breakpoints.down("lg"));
 
   const [currentPick, setCurrentPick] = useState<Result | "">(result);
-  const [betAmount, setBetAmount] = useState<number | "">(initialBetAmount);
+  const [betAmount, setBetAmount] = useState<number | ''>(initialBetAmount);
   const [potentialWin, setPotentialWin] = useState<number>(0);
+  const initialRender = useRef(true);
+
+  const latestValues = useRef({ currentPick, betAmount });
 
   useEffect(() => {
     if (!betAmount) {
@@ -49,8 +52,10 @@ const MatchComponent = ({
       return;
     }
 
+    latestValues.current = { currentPick, betAmount };
+
     setPotentialWin(
-      (betAmount *
+      (Number(betAmount) *
         match[
           currentPick == Result.HOME_TEAM
             ? "homeWinOdds"
@@ -62,27 +67,36 @@ const MatchComponent = ({
     );
   }, [betAmount, currentPick, match]);
 
-  useEffect(() => {
-    const makeApiCall = async () => {
-      if (currentPick && betAmount) {
-        try {
-          await fetch("/api/pick", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              matchId: match.id,
-              result: currentPick,
-              betAmount,
-            }),
-          });
-        } catch (e) {
-          console.error(e);
-        }
-      }
-    };
+  const makeApiCall = async () => {
+    if (initialRender.current) {
+      initialRender.current = false;
+      return;
+    }
 
-    makeApiCall();
-  }, [match.id, currentPick, betAmount]);
+    const { currentPick, betAmount } = latestValues.current;
+
+    if (currentPick && betAmount) {
+      try {
+        await fetch("/api/pick", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            matchId: match.id,
+            result: currentPick,
+            betAmount,
+          }),
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }
+
+  const debouncedApiCall = useRef(debounce(makeApiCall, 500)).current;
+
+  useEffect(() => {
+    debouncedApiCall();
+  }, [currentPick, betAmount, debouncedApiCall]);
 
   return (
     <Box
