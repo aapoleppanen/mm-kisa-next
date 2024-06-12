@@ -143,9 +143,8 @@ const LeaderboardPage = ({ users }: Props) => {
             borderRadius: "12px",
             backgroundColor: "#f0f0f0",
             boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-            transition: "background-color 0.1s ease",
             "&:hover": {
-              backgroundColor: "#26413c",
+              backgroundColor: "rgb(211, 211, 211)",
             }
           }}
         >

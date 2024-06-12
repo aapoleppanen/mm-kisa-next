@@ -109,7 +109,7 @@ const MatchComponent = ({
       flexDirection="column"
       mt={2}
       sx={{
-        backgroundColor: "rgb(211, 211, 211, 1)",
+        background: "linear-gradient(to bottom right, rgb(211, 211, 211), rgb(150, 160, 155))",
         border: "0px solid #FFFFFF",
         borderRadius: "50px",
         overflow: "hidden",

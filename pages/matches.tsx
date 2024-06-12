@@ -196,10 +196,11 @@ const Matches: NextPage<Props> = ({ matches, filteredUrls, userCredits }) => {
             mt={4}
             sx={{
               marginTop: "150%",
-              backgroundColor: "rgb(211, 211, 211, 1)",
+              background: "linear-gradient(to bottom right, rgb(211, 211, 211), rgb(150, 160, 155))",
               borderRadius: "12px",
               width: "80%",
               height: "60px",
+              boxShadow: '3px 4px 5px rgba(0, 0, 0, 0.5)'
             }}
           >
             <Box
@@ -245,10 +246,11 @@ const Matches: NextPage<Props> = ({ matches, filteredUrls, userCredits }) => {
                     flexDirection="column"
                     mt={4}
                     sx={{
-                      backgroundColor: "rgb(211, 211, 211, 1)",
+                      background: "linear-gradient(to bottom right, rgb(211, 211, 211), rgb(150, 160, 155))",
                       borderRadius: "12px",
                       width: "90%",
                       height: "60px",
+                      boxShadow: '3px 4px 5px rgba(0, 0, 0, 0.5)'
                     }}
                   >
                     <Box
