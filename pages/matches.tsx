@@ -28,6 +28,17 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       props: {},
     };
   }
+  const userId = session?.user?.id;
+
+  const userCredits = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      remainingCredits: true,
+    },
+  });
+
   const supabase = createClient();
   const { data: emKisaNextContents, error } = await supabase.storage
     .from("em-kisa-next")
@@ -82,7 +93,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   });
 
   return {
-    props: { matches: JSON.parse(JSON.stringify(matches)), filteredUrls },
+    props: {
+      matches: JSON.parse(JSON.stringify(matches)),
+      filteredUrls,
+      userCredits,
+    },
   };
 };
 
@@ -93,19 +108,24 @@ type Props = {
     Pick?: [Pick];
   })[];
   filteredUrls: string[];
+  userCredits: {
+    remainingCredits: number;
+  };
 };
 interface AltsDictionary {
   [key: string]: string;
 }
-const Matches: NextPage<Props> = ({ matches, filteredUrls }) => {
+const Matches: NextPage<Props> = ({ matches, filteredUrls, userCredits }) => {
   const [currentBackgroundIndex, setCurrentBackgroundIndex] = useState(() => {
     const currentDate = new Date();
-
     const totalImages = filteredUrls.length;
-
     const index = currentDate.getDate() % totalImages;
     return index;
   });
+  const [currenUserCredits, setCurrentUserCredits] = useState(
+    userCredits.remainingCredits
+  );
+
   const renderMatchComponents = () => {
     try {
       var lastDate = new Date(matches[0].startTime);
@@ -138,12 +158,35 @@ const Matches: NextPage<Props> = ({ matches, filteredUrls }) => {
             mt={4}
             sx={{
               color: "white",
-              fontSize: "17px",
+              fontSize: { xs: "17px", md: "24px" },
               fontWeight: "bold",
               textShadow: "2px 2px 2px rgba(0, 0, 0, 1)",
+              marginTop: "60px"
             }}
           >
             PICKS MUST BE MADE 1 HOUR BEFORE MATCH STARTS
+          </Box>
+          <Box
+            sx={{
+              position: "fixed",
+              top: { xs: "10px", md: "auto" }, 
+              bottom: { xs: "auto", md: "10px" },
+              right: "20px", 
+              backgroundColor: "white",
+              zIndex: 9999,
+              width: "auto",
+              padding: "10px 20px",
+              height: "auto",
+              borderRadius: "12px",
+              border: "2px solid black",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0px 4px 15px rgba(0, 0, 0, 0.1)",
+              fontWeight: "bold",
+            }}
+          >
+            Your Credits: {userCredits.remainingCredits}
           </Box>
           <Box
             display="flex"
@@ -152,7 +195,8 @@ const Matches: NextPage<Props> = ({ matches, filteredUrls }) => {
             flexDirection="column"
             mt={4}
             sx={{
-              backgroundColor: "rgb(211, 211, 211, 0.7)",
+              marginTop: "150%",
+              backgroundColor: "rgb(211, 211, 211, 1)",
               borderRadius: "12px",
               width: "80%",
               height: "60px",
@@ -201,7 +245,7 @@ const Matches: NextPage<Props> = ({ matches, filteredUrls }) => {
                     flexDirection="column"
                     mt={4}
                     sx={{
-                      backgroundColor: "rgb(211, 211, 211, 0.7)",
+                      backgroundColor: "rgb(211, 211, 211, 1)",
                       borderRadius: "12px",
                       width: "90%",
                       height: "60px",
@@ -224,6 +268,7 @@ const Matches: NextPage<Props> = ({ matches, filteredUrls }) => {
                   match={match}
                   result={result}
                   betAmount={betAmount}
+                  updateUserCredits={setCurrentUserCredits}
                 />
               </Box>
             );

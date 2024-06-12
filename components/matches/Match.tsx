@@ -31,12 +31,14 @@ type Props = {
   };
   result: Result | "";
   betAmount: number;
+  updateUserCredits: (c: number) => void;
 };
 
 const MatchComponent = ({
   match,
   result,
   betAmount: initialBetAmount,
+  updateUserCredits
 }: Props) => {
   const mobile = useMediaQuery(theme.breakpoints.down("lg"));
 
@@ -107,12 +109,13 @@ const MatchComponent = ({
       flexDirection="column"
       mt={2}
       sx={{
-        backgroundColor: "rgb(211, 211, 211, 0.7)",
+        backgroundColor: "rgb(211, 211, 211, 1)",
         border: "0px solid #FFFFFF",
         borderRadius: "50px",
         overflow: "hidden",
         p: 1,
-        width: '100%'
+        width: '100%',
+        boxShadow: '3px 4px 5px rgba(0, 0, 0, 0.5)'
       }}
     >
       <Typography
