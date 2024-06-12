@@ -31,7 +31,6 @@ type Props = {
   };
   result: Result | "";
   betAmount: number;
-  isMiddle: boolean;
 };
 
 const MatchComponent = ({
@@ -112,13 +111,19 @@ const MatchComponent = ({
         border: "0px solid #FFFFFF",
         borderRadius: "50px",
         overflow: "hidden",
-        p: 2,
+        p: 1,
+        width: '100%'
       }}
     >
       <Typography
         variant="h6"
         color="primary"
-        sx={{ fontSize: "40px", fontWeight: "bold", color: "white", textShadow: "2px 2px 5px rgba(0, 0, 0, 1)"}}
+        sx={{
+          fontSize: "40px",
+          fontWeight: "bold",
+          color: "white",
+          textShadow: "2px 2px 5px rgba(0, 0, 0, 1)",
+        }}
       >
         {format(new Date(match.startTime), "HH:mm")}
       </Typography>
@@ -136,7 +141,7 @@ const MatchComponent = ({
             variant={currentPick == Result.HOME_TEAM ? "contained" : "outlined"}
             onClick={() => setCurrentPick(Result.HOME_TEAM)}
             disabled={disabledToday(new Date(match.startTime))}
-            sx={{ borderColor: 'primary.main' , borderRadius: '12px'}}
+            sx={{ borderColor: "primary.main", borderRadius: "12px" }}
           >
             <StyledBox>
               <Image
@@ -162,7 +167,7 @@ const MatchComponent = ({
             variant={currentPick == Result.DRAW ? "contained" : "outlined"}
             onClick={() => setCurrentPick(Result.DRAW)}
             disabled={disabledToday(new Date(match.startTime))}
-            sx={{ borderColor: 'primary.main' , borderRadius: '12px'}}
+            sx={{ borderColor: "primary.main", borderRadius: "12px" }}
           >
             <StyledBox>
               <Box>Draw</Box>
@@ -175,7 +180,7 @@ const MatchComponent = ({
             variant={currentPick == Result.AWAY_TEAM ? "contained" : "outlined"}
             onClick={() => setCurrentPick(Result.AWAY_TEAM)}
             disabled={disabledToday(new Date(match.startTime))}
-            sx={{ borderColor: 'primary.main' , borderRadius: '12px'}}
+            sx={{ borderColor: "primary.main", borderRadius: "12px" }}
           >
             <StyledBox>
               <Image
@@ -222,10 +227,10 @@ const MatchComponent = ({
             InputProps={{
               endAdornment: (
                 <Box
-                  color="gray"
+                  color="black"
                   ml={1}
                   width="min-content"
-                  sx={{ textWrap: "nowrap" }}
+                  sx={{textWrap: "nowrap"}}
                 >
                   = {potentialWin.toFixed(2)} points
                 </Box>
@@ -245,6 +250,7 @@ const MatchComponent = ({
               setBetAmount(0);
             }}
             disabled={disabledToday(new Date(match.startTime))}
+            sx={{ fontSize: "16px", fontWeight: "bold" }}
           >
             Clear
           </Button>

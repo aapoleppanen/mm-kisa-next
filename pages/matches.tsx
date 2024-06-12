@@ -146,14 +146,29 @@ const Matches: NextPage<Props> = ({ matches, filteredUrls }) => {
             PICKS MUST BE MADE 1 HOUR BEFORE MATCH STARTS
           </Box>
           <Box
-            typography="h4"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            flexDirection="column"
             mt={4}
             sx={{
-              color: "white",
-              textShadow: "2px 2px 2px rgba(0, 0, 0, 1)", // Adjust the shadow's spread and color as needed
+              backgroundColor: "rgb(211, 211, 211, 0.7)",
+              borderRadius: "12px",
+              width: "80%",
+              height: "60px",
             }}
           >
-            {lastDate.toDateString()}
+            <Box
+              typography="h4"
+              sx={{
+                fontSize: "40px",
+                fontWeight: "bold",
+                color: "white",
+                textShadow: "2px 2px 5px rgba(0, 0, 0, 1)",
+              }}
+            >
+              {lastDate.toDateString()}
+            </Box>
           </Box>
           {matches.map((match, index) => {
             const result =
@@ -188,13 +203,15 @@ const Matches: NextPage<Props> = ({ matches, filteredUrls }) => {
                     sx={{
                       backgroundColor: "rgb(211, 211, 211, 0.7)",
                       borderRadius: "12px",
-                      width: "80%", // Adjust this to the desired width
+                      width: "90%",
                       height: "60px",
                     }}
                   >
                     <Box
                       typography="h4"
                       sx={{
+                        fontSize: "40px",
+                        fontWeight: "bold",
                         color: "white",
                         textShadow: "2px 2px 5px rgba(0, 0, 0, 1)",
                       }}

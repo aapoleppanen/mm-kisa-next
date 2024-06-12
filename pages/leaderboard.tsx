@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { styled } from '@mui/system';
 import { Box, Collapse, Divider } from "@mui/material";
 import { Match, Pick, Player, Team, User } from "@prisma/client";
 import { GetServerSideProps } from "next";
@@ -6,6 +7,13 @@ import { useState } from "react";
 import PicksOverview from "../components/PicksOverview";
 import prisma from "../lib/prisma";
 import Image from "next/image";
+
+const StyledBox = styled(Box)({
+  fontSize: "20px",
+  color: "black",
+  fontWeight: "bold",
+  textShadow: "0px 2px 4px rgba(255, 255, 255, 0.3)"
+});
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await auth(context);
@@ -90,6 +98,8 @@ export type UserPicks = User & {
   topScorerPick: Player;
 };
 
+
+
 const LeaderboardPage = ({ users }: Props) => {
   const [selected, setSelected] = useState<string | null>(null);
   const [picks, setPicks] = useState<UserPicks | null>(null);
@@ -128,6 +138,16 @@ const LeaderboardPage = ({ users }: Props) => {
           width="100%"
           p={1}
           onClick={() => handleExpand(user.id)}
+          sx={{
+            cursor: "pointer",
+            borderRadius: "12px",
+            backgroundColor: "#f0f0f0",
+            boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+            transition: "background-color 0.1s ease",
+            "&:hover": {
+              backgroundColor: "#26413c",
+            }
+          }}
         >
           <Box
             display="flex"
@@ -145,9 +165,9 @@ const LeaderboardPage = ({ users }: Props) => {
                   height={45}
                 />
               )}
-              <Box>{user.name}</Box>
+              <StyledBox>{user.name}</StyledBox>
             </Box>
-            <Box>{user.winnings / 100 ?? 0}</Box>
+            <StyledBox >{user.winnings / 100 ?? 0}</StyledBox>
           </Box>
           <Divider />
           <Collapse in={selected === user.id && !!picks} unmountOnExit>
