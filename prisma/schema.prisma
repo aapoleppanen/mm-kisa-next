@@ -104,7 +104,7 @@ model User {
   sessions      Session[]
   teamId        Int?
   playerId      Int?
-  credits       Float     @default(0) @db.Real
+  credits       Float     @default(500) @db.Real
   remainingCredits Float  @default(0) @db.Real
   points        Float     @default(0) @db.Real
 

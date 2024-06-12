@@ -7,6 +7,8 @@ import {
   styled,
   useMediaQuery,
   Typography,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { Match, Result, Team } from "@prisma/client";
 import { format } from "date-fns";
@@ -14,6 +16,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { disabledToday } from "../../lib/config";
 import { theme } from "../../pages/_app";
+import { useSnackbar } from "notistack";
 
 const StyledBox = styled(Box)(() => ({
   width: "300px",
@@ -31,20 +34,21 @@ type Props = {
   };
   result: Result | "";
   betAmount: number;
-  updateUserCredits: (c: number) => void;
+  updateUserCredits: (credits: number) => void;
 };
 
 const MatchComponent = ({
   match,
   result,
   betAmount: initialBetAmount,
-  updateUserCredits
+  updateUserCredits,
 }: Props) => {
   const mobile = useMediaQuery(theme.breakpoints.down("lg"));
 
   const [currentPick, setCurrentPick] = useState<Result | "">(result);
   const [betAmount, setBetAmount] = useState<number | "">(initialBetAmount);
   const [potentialWin, setPotentialWin] = useState<number>(0);
+  const { enqueueSnackbar } = useSnackbar();
   const initialRender = useRef(true);
 
   const latestValues = useRef({ currentPick, betAmount });
@@ -80,7 +84,7 @@ const MatchComponent = ({
 
     if (currentPick && betAmount) {
       try {
-        await fetch("/api/pick", {
+        const response = await fetch("/api/pick", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -89,7 +93,19 @@ const MatchComponent = ({
             betAmount,
           }),
         });
+
+        if (response.status === 403) {
+          const { error } = await response.json();
+          enqueueSnackbar(error, { variant: "error" });
+          return
+        }
+
+        const { remainingCredits } = await response.json();
+        console.log(response.json, remainingCredits)
+
+        updateUserCredits(remainingCredits);
       } catch (e) {
+        console.log("hello world", e);
         console.error(e);
       }
     }
@@ -226,14 +242,14 @@ const MatchComponent = ({
               width: "260px",
               //backgroundColor: 'white'
             }}
-            inputProps={{ step: "0.01" }}
+            inputProps={{ step: "0.01", min: "0" }}
             InputProps={{
               endAdornment: (
                 <Box
                   color="black"
                   ml={1}
                   width="min-content"
-                  sx={{textWrap: "nowrap"}}
+                  sx={{ textWrap: "nowrap" }}
                 >
                   = {potentialWin.toFixed(2)} points
                 </Box>
