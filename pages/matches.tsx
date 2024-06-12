@@ -2,12 +2,14 @@ import { Box, Button, Card, Grid, Paper, useMediaQuery } from "@mui/material";
 import { Match, Pick, Result, Team } from "@prisma/client";
 import { isSameDay } from "date-fns";
 import { GetServerSideProps, NextPage } from "next";
+import React, { useState, useEffect } from "react";
+import { createClient } from "@/supabase/client";
 import Image from "next/image";
 import { auth } from "@/auth";
 import useSWR, { Fetcher } from "swr";
 import BottomNav from "../components/BottomNav";
 import Header from "../components/Header";
-import profile from "../assets/1.jpg";
+import profile from "../public/assets/1.jpg";
 import Leaderboard from "../components/Leaderboard";
 import MatchComponent from "../components/matches/Match";
 import prisma from "../lib/prisma";
@@ -26,7 +28,38 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       props: {},
     };
   }
+  const supabase = createClient();
+  const { data: emKisaNextContents, error } = await supabase.storage
+    .from("em-kisa-next")
+    .list("");
 
+  if (error) {
+    console.error(
+      "Error fetching contents from Supabase Storage:",
+      error.message
+    );
+    return {
+      props: {
+        error: "Failed to fetch contents from Supabase Storage",
+      },
+    };
+  }
+
+  const fetchPublicUrl = async (filePath: string) => {
+    if (!filePath.startsWith("background")) {
+      return null;
+    }
+    const { data } = await supabase.storage
+      .from("em-kisa-next")
+      .getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
+  const publicUrls = await Promise.all(
+    emKisaNextContents.map((item) => fetchPublicUrl(item.name))
+  );
+
+  const filteredUrls = publicUrls.filter((url) => url !== null);
   const matches = await prisma.match.findMany({
     include: {
       away: true,
@@ -49,7 +82,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   });
 
   return {
-    props: { matches: JSON.parse(JSON.stringify(matches)) },
+    props: { matches: JSON.parse(JSON.stringify(matches)), filteredUrls },
   };
 };
 
@@ -59,25 +92,20 @@ type Props = {
     home: Team;
     Pick?: [Pick];
   })[];
+  filteredUrls: string[];
 };
 interface AltsDictionary {
   [key: string]: string;
 }
-const Matches: NextPage<Props> = ({ matches }) => {
-  const picsArray = [
-    { id: "1", alt: "Alt text for pic1" },
-    { id: "2", alt: "Alt text for pic2" },
-    { id: "3", alt: "Alt text for pic3" },
-    { id: "4", alt: "Alt text for pic4" },
-    { id: "5", alt: "Alt text for pic5" },
-    { id: "6", alt: "Alt text for pic6" },
-    { id: "7", alt: "Alt text for pic7" },
-    { id: "8", alt: "Alt text for pic8" },
-    { id: "9", alt: "Alt text for pic9" },
-    { id: "10", alt: "Alt text for pic10" },
-    { id: "11", alt: "Alt text for pic11" },
-    { id: "12", alt: "Alt text for pic12" },
-  ];
+const Matches: NextPage<Props> = ({ matches, filteredUrls }) => {
+  const [currentBackgroundIndex, setCurrentBackgroundIndex] = useState(() => {
+    const currentDate = new Date();
+
+    const totalImages = filteredUrls.length;
+
+    const index = currentDate.getDate() % totalImages;
+    return index;
+  });
   const renderMatchComponents = () => {
     try {
       var lastDate = new Date(matches[0].startTime);
@@ -87,26 +115,15 @@ const Matches: NextPage<Props> = ({ matches }) => {
           flexDirection="column"
           alignItems="center"
           justifyContent="center"
-          sx={{
-            position: "relative",
-            width: "100vw",
-            minHeight: "100vh",
-            backgroundImage: `url(${profile.src})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            backgroundAttachment: "fixed",
-          }}
         >
-          {/*picsArray.map(({ id, alt }) => (
+          {filteredUrls && (
             <Image
-              key={id}
-              src={`../assets/${id}.jpg`}
-              alt={alt}
-              width="64"
-              height="64"
-              
+              src={filteredUrls[currentBackgroundIndex]} // this works if profile is used here
+              alt="background"
+              width="100"
+              height="100"
               style={{
-                position: "absolute",
+                position: "fixed",
                 width: "100%",
                 height: "100%",
                 objectFit: "cover",
@@ -115,9 +132,8 @@ const Matches: NextPage<Props> = ({ matches }) => {
                 zIndex: -1,
                 // filter: "saturate(20%) contrast(60%)"
               }}
-                
             />
-          ))*/}
+          )}
           <Box
             mt={4}
             sx={{
@@ -139,7 +155,7 @@ const Matches: NextPage<Props> = ({ matches }) => {
           >
             {lastDate.toDateString()}
           </Box>
-          {matches.map((match) => {
+          {matches.map((match, index) => {
             const result =
               (match.Pick?.length && match.Pick[0].pickedResult) ??
               Result.NO_RESULT;

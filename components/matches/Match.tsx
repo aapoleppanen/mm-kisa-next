@@ -31,6 +31,7 @@ type Props = {
   };
   result: Result | "";
   betAmount: number;
+  isMiddle: boolean;
 };
 
 const MatchComponent = ({
@@ -117,7 +118,7 @@ const MatchComponent = ({
       <Typography
         variant="h6"
         color="primary"
-        sx={{ fontSize: "40px", fontWeight: "bold", color: "white" }}
+        sx={{ fontSize: "40px", fontWeight: "bold", color: "white", textShadow: "2px 2px 5px rgba(0, 0, 0, 1)"}}
       >
         {format(new Date(match.startTime), "HH:mm")}
       </Typography>
@@ -135,7 +136,7 @@ const MatchComponent = ({
             variant={currentPick == Result.HOME_TEAM ? "contained" : "outlined"}
             onClick={() => setCurrentPick(Result.HOME_TEAM)}
             disabled={disabledToday(new Date(match.startTime))}
-            //sx={{ backgroundColor: "white" , borderRadius: '12px'}}
+            sx={{ borderColor: 'primary.main' , borderRadius: '12px'}}
           >
             <StyledBox>
               <Image
@@ -161,7 +162,7 @@ const MatchComponent = ({
             variant={currentPick == Result.DRAW ? "contained" : "outlined"}
             onClick={() => setCurrentPick(Result.DRAW)}
             disabled={disabledToday(new Date(match.startTime))}
-            //sx={{ backgroundColor: "white" , borderRadius: '12px'}}
+            sx={{ borderColor: 'primary.main' , borderRadius: '12px'}}
           >
             <StyledBox>
               <Box>Draw</Box>
@@ -174,7 +175,7 @@ const MatchComponent = ({
             variant={currentPick == Result.AWAY_TEAM ? "contained" : "outlined"}
             onClick={() => setCurrentPick(Result.AWAY_TEAM)}
             disabled={disabledToday(new Date(match.startTime))}
-            //sx={{ backgroundColor: "white" , borderRadius: '12px'}}
+            sx={{ borderColor: 'primary.main' , borderRadius: '12px'}}
           >
             <StyledBox>
               <Image
