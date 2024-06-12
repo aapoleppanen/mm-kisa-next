@@ -20,7 +20,7 @@ BEGIN
         FROM
           "Pick"
         WHERE
-          NEW."userId" = "User".id
+          "Pick"."userId" = "User".id
       ),
       0
     )

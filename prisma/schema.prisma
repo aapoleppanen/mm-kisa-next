@@ -59,6 +59,7 @@ model Pick {
   betAmount    Float   @default(0) @db.Real
 
   @@index([userId, matchId])
+  @@unique([userId, matchId])
 }
 
 model Account {
