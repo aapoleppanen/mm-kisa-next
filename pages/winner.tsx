@@ -79,6 +79,7 @@ const Winner = ({ teams, userPick }: Props) => {
             variant={team.id == picked ? "contained" : "outlined"}
             fullWidth
             disabled={disablePrePicks()}
+            sx={{ borderColor: 'primary.main' , borderRadius: '12px'}}
           >
             <Box
               display="flex"

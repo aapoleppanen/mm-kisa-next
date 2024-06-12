@@ -2,14 +2,19 @@ import { Box, Button, Card, Grid, Paper, useMediaQuery } from "@mui/material";
 import { Match, Pick, Result, Team } from "@prisma/client";
 import { isSameDay } from "date-fns";
 import { GetServerSideProps, NextPage } from "next";
+import React, { useState, useEffect } from "react";
+import { createClient } from "@/supabase/client";
+import Image from "next/image";
 import { auth } from "@/auth";
 import useSWR, { Fetcher } from "swr";
 import BottomNav from "../components/BottomNav";
 import Header from "../components/Header";
+import profile from "../public/assets/1.jpg";
 import Leaderboard from "../components/Leaderboard";
 import MatchComponent from "../components/matches/Match";
 import prisma from "../lib/prisma";
 import { theme } from "./_app";
+import { ImagesearchRoller } from "@mui/icons-material";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await auth(context);
@@ -23,7 +28,38 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       props: {},
     };
   }
+  const supabase = createClient();
+  const { data: emKisaNextContents, error } = await supabase.storage
+    .from("em-kisa-next")
+    .list("");
 
+  if (error) {
+    console.error(
+      "Error fetching contents from Supabase Storage:",
+      error.message
+    );
+    return {
+      props: {
+        error: "Failed to fetch contents from Supabase Storage",
+      },
+    };
+  }
+
+  const fetchPublicUrl = async (filePath: string) => {
+    if (!filePath.startsWith("background")) {
+      return null;
+    }
+    const { data } = await supabase.storage
+      .from("em-kisa-next")
+      .getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
+  const publicUrls = await Promise.all(
+    emKisaNextContents.map((item) => fetchPublicUrl(item.name))
+  );
+
+  const filteredUrls = publicUrls.filter((url) => url !== null);
   const matches = await prisma.match.findMany({
     include: {
       away: true,
@@ -46,7 +82,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   });
 
   return {
-    props: { matches: JSON.parse(JSON.stringify(matches)) },
+    props: { matches: JSON.parse(JSON.stringify(matches)), filteredUrls },
   };
 };
 
@@ -56,9 +92,20 @@ type Props = {
     home: Team;
     Pick?: [Pick];
   })[];
+  filteredUrls: string[];
 };
+interface AltsDictionary {
+  [key: string]: string;
+}
+const Matches: NextPage<Props> = ({ matches, filteredUrls }) => {
+  const [currentBackgroundIndex, setCurrentBackgroundIndex] = useState(() => {
+    const currentDate = new Date();
 
-const Matches: NextPage<Props> = ({ matches }) => {
+    const totalImages = filteredUrls.length;
+
+    const index = currentDate.getDate() % totalImages;
+    return index;
+  });
   const renderMatchComponents = () => {
     try {
       var lastDate = new Date(matches[0].startTime);
@@ -69,11 +116,61 @@ const Matches: NextPage<Props> = ({ matches }) => {
           alignItems="center"
           justifyContent="center"
         >
-          <Box mt={4}>PICKS MUST BE MADE 1 HOUR BEFORE MATCH STARTS</Box>
-          <Box typography="h4" mt={4}>
-            {lastDate.toDateString()}
+          {filteredUrls && (
+            <Image
+              src={filteredUrls[currentBackgroundIndex]} // this works if profile is used here
+              alt="background"
+              width="100"
+              height="100"
+              style={{
+                position: "fixed",
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                left: 0,
+                top: 0,
+                zIndex: -1,
+                // filter: "saturate(20%) contrast(60%)"
+              }}
+            />
+          )}
+          <Box
+            mt={4}
+            sx={{
+              color: "white",
+              fontSize: "17px",
+              fontWeight: "bold",
+              textShadow: "2px 2px 2px rgba(0, 0, 0, 1)",
+            }}
+          >
+            PICKS MUST BE MADE 1 HOUR BEFORE MATCH STARTS
           </Box>
-          {matches.map((match) => {
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            flexDirection="column"
+            mt={4}
+            sx={{
+              backgroundColor: "rgb(211, 211, 211, 0.7)",
+              borderRadius: "12px",
+              width: "80%",
+              height: "60px",
+            }}
+          >
+            <Box
+              typography="h4"
+              sx={{
+                fontSize: "40px",
+                fontWeight: "bold",
+                color: "white",
+                textShadow: "2px 2px 5px rgba(0, 0, 0, 1)",
+              }}
+            >
+              {lastDate.toDateString()}
+            </Box>
+          </Box>
+          {matches.map((match, index) => {
             const result =
               (match.Pick?.length && match.Pick[0].pickedResult) ??
               Result.NO_RESULT;
@@ -103,8 +200,24 @@ const Matches: NextPage<Props> = ({ matches }) => {
                     justifyContent="center"
                     flexDirection="column"
                     mt={4}
+                    sx={{
+                      backgroundColor: "rgb(211, 211, 211, 0.7)",
+                      borderRadius: "12px",
+                      width: "90%",
+                      height: "60px",
+                    }}
                   >
-                    <Box typography="h4">{startDate.toDateString()}</Box>
+                    <Box
+                      typography="h4"
+                      sx={{
+                        fontSize: "40px",
+                        fontWeight: "bold",
+                        color: "white",
+                        textShadow: "2px 2px 5px rgba(0, 0, 0, 1)",
+                      }}
+                    >
+                      {startDate.toDateString()}
+                    </Box>
                   </Box>
                 )}
                 <MatchComponent

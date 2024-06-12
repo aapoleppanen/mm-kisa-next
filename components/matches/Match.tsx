@@ -6,6 +6,7 @@ import {
   debounce,
   styled,
   useMediaQuery,
+  Typography,
 } from "@mui/material";
 import { Match, Result, Team } from "@prisma/client";
 import { format } from "date-fns";
@@ -40,7 +41,7 @@ const MatchComponent = ({
   const mobile = useMediaQuery(theme.breakpoints.down("lg"));
 
   const [currentPick, setCurrentPick] = useState<Result | "">(result);
-  const [betAmount, setBetAmount] = useState<number | ''>(initialBetAmount);
+  const [betAmount, setBetAmount] = useState<number | "">(initialBetAmount);
   const [potentialWin, setPotentialWin] = useState<number>(0);
   const initialRender = useRef(true);
 
@@ -90,7 +91,7 @@ const MatchComponent = ({
         console.error(e);
       }
     }
-  }
+  };
 
   const debouncedApiCall = useRef(debounce(makeApiCall, 500)).current;
 
@@ -105,8 +106,27 @@ const MatchComponent = ({
       justifyContent="center"
       flexDirection="column"
       mt={2}
+      sx={{
+        backgroundColor: "rgb(211, 211, 211, 0.7)",
+        border: "0px solid #FFFFFF",
+        borderRadius: "50px",
+        overflow: "hidden",
+        p: 1,
+        width: '100%'
+      }}
     >
-      {format(new Date(match.startTime), "HH:mm")}
+      <Typography
+        variant="h6"
+        color="primary"
+        sx={{
+          fontSize: "40px",
+          fontWeight: "bold",
+          color: "white",
+          textShadow: "2px 2px 5px rgba(0, 0, 0, 1)",
+        }}
+      >
+        {format(new Date(match.startTime), "HH:mm")}
+      </Typography>
       <Grid
         item
         mb={2}
@@ -121,6 +141,7 @@ const MatchComponent = ({
             variant={currentPick == Result.HOME_TEAM ? "contained" : "outlined"}
             onClick={() => setCurrentPick(Result.HOME_TEAM)}
             disabled={disabledToday(new Date(match.startTime))}
+            sx={{ borderColor: "primary.main", borderRadius: "12px" }}
           >
             <StyledBox>
               <Image
@@ -146,6 +167,7 @@ const MatchComponent = ({
             variant={currentPick == Result.DRAW ? "contained" : "outlined"}
             onClick={() => setCurrentPick(Result.DRAW)}
             disabled={disabledToday(new Date(match.startTime))}
+            sx={{ borderColor: "primary.main", borderRadius: "12px" }}
           >
             <StyledBox>
               <Box>Draw</Box>
@@ -158,6 +180,7 @@ const MatchComponent = ({
             variant={currentPick == Result.AWAY_TEAM ? "contained" : "outlined"}
             onClick={() => setCurrentPick(Result.AWAY_TEAM)}
             disabled={disabledToday(new Date(match.startTime))}
+            sx={{ borderColor: "primary.main", borderRadius: "12px" }}
           >
             <StyledBox>
               <Image
@@ -198,15 +221,16 @@ const MatchComponent = ({
             size="small"
             sx={{
               width: "260px",
+              //backgroundColor: 'white'
             }}
             inputProps={{ step: "0.01" }}
             InputProps={{
               endAdornment: (
                 <Box
-                  color="gray"
+                  color="black"
                   ml={1}
                   width="min-content"
-                  sx={{ textWrap: "nowrap" }}
+                  sx={{textWrap: "nowrap"}}
                 >
                   = {potentialWin.toFixed(2)} points
                 </Box>
@@ -226,6 +250,7 @@ const MatchComponent = ({
               setBetAmount(0);
             }}
             disabled={disabledToday(new Date(match.startTime))}
+            sx={{ fontSize: "16px", fontWeight: "bold" }}
           >
             Clear
           </Button>

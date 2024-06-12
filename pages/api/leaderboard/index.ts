@@ -2,7 +2,10 @@ import { auth } from "@/auth";
 import prisma from "../../../lib/prisma";
 import { NextApiRequest, NextApiResponse } from "next";
 
-export default async function handle(req: NextApiRequest, res: NextApiResponse) {
+export default async function handle(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   try {
     const session = await auth(req, res);
 
@@ -40,8 +43,7 @@ export default async function handle(req: NextApiRequest, res: NextApiResponse) 
     ORDER BY total DESC;
   `;
 
-  console.log(users);
-
+    console.log(users);
     return res.json({
       users: JSON.parse(JSON.stringify(users)),
     });
