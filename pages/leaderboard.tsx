@@ -7,6 +7,7 @@ import { useState } from "react";
 import PicksOverview from "../components/PicksOverview";
 import prisma from "../lib/prisma";
 import Image from "next/image";
+import { roundNumber } from "@/utils/numberUtils";
 
 const StyledBox = styled(Box)({
   fontSize: "20px",
@@ -64,7 +65,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       WHERE "Player".id = 95
     ) AS player ON player.id = "User"."playerId" AND player.id = 95
     GROUP BY "User".id, "User".name, "Team"."winningOdds", playerOdds
-    ORDER BY total DESC;
+    ORDER BY winnings DESC;
   `;
 
   return {
@@ -145,7 +146,7 @@ const LeaderboardPage = ({ users }: Props) => {
             boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
             transition: "background-color 0.1s ease",
             "&:hover": {
-              backgroundColor: "#26413c",
+              backgroundColor: "rgb(211, 211, 211)",
             }
           }}
         >
@@ -167,7 +168,7 @@ const LeaderboardPage = ({ users }: Props) => {
               )}
               <StyledBox>{user.name}</StyledBox>
             </Box>
-            <StyledBox >{user.winnings / 100 ?? 0}</StyledBox>
+            <StyledBox >{roundNumber(user.winnings / 100)}</StyledBox>
           </Box>
           <Divider />
           <Collapse in={selected === user.id && !!picks} unmountOnExit>

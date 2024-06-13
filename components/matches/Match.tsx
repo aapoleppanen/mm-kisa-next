@@ -3,20 +3,19 @@ import {
   Button,
   Grid,
   TextField,
+  Typography,
   debounce,
   styled,
-  useMediaQuery,
-  Typography,
-  Snackbar,
-  Alert,
+  useMediaQuery
 } from "@mui/material";
 import { Match, Result, Team } from "@prisma/client";
 import { format } from "date-fns";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useSnackbar } from "notistack";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { z } from "zod";
 import { disabledToday } from "../../lib/config";
 import { theme } from "../../pages/_app";
-import { useSnackbar } from "notistack";
 
 const StyledBox = styled(Box)(() => ({
   width: "300px",
@@ -37,6 +36,8 @@ type Props = {
   updateUserCredits: (credits: number) => void;
 };
 
+const ZBetAmount = z.number().min(0);
+
 const MatchComponent = ({
   match,
   result,
@@ -44,78 +45,73 @@ const MatchComponent = ({
   updateUserCredits,
 }: Props) => {
   const mobile = useMediaQuery(theme.breakpoints.down("lg"));
-
-  const [currentPick, setCurrentPick] = useState<Result | "">(result);
-  const [betAmount, setBetAmount] = useState<number | "">(initialBetAmount);
+  const [currentPick, setCurrentPick] = useState<Result | "">(() => result);
+  const [betAmount, setBetAmount] = useState<number | "">(
+    () => initialBetAmount
+  );
   const [potentialWin, setPotentialWin] = useState<number>(0);
   const { enqueueSnackbar } = useSnackbar();
-  const initialRender = useRef(true);
 
   const latestValues = useRef({ currentPick, betAmount });
 
   useEffect(() => {
-    if (!betAmount) {
-      setPotentialWin(0);
-      return;
-    }
-
     latestValues.current = { currentPick, betAmount };
 
-    setPotentialWin(
-      (Number(betAmount) *
-        match[
-          currentPick == Result.HOME_TEAM
-            ? "homeWinOdds"
-            : currentPick == Result.DRAW
-            ? "drawOdds"
-            : "awayWinOdds"
-        ]) /
-        100
-    );
+    if (!betAmount) {
+      setPotentialWin(0);
+    } else {
+      setPotentialWin(
+        (Number(betAmount) *
+          match[
+            currentPick == Result.HOME_TEAM
+              ? "homeWinOdds"
+              : currentPick == Result.DRAW
+              ? "drawOdds"
+              : "awayWinOdds"
+          ]) /
+          100
+      );
+    }
   }, [betAmount, currentPick, match]);
 
-  const makeApiCall = async () => {
-    if (initialRender.current) {
-      initialRender.current = false;
+  const makeApiCall = useCallback(async () => {
+    const { currentPick, betAmount } = latestValues.current;
+
+    if (!currentPick && !ZBetAmount.safeParse(betAmount).success) {
       return;
     }
 
-    const { currentPick, betAmount } = latestValues.current;
-
-    if (currentPick && betAmount) {
-      try {
-        const response = await fetch("/api/pick", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            matchId: match.id,
-            result: currentPick,
-            betAmount,
-          }),
-        });
-
-        if (response.status === 403) {
-          const { error } = await response.json();
-          enqueueSnackbar(error, { variant: "error" });
-          return
-        }
-
-        const { remainingCredits } = await response.json();
-        console.log(response.json, remainingCredits)
-
-        updateUserCredits(remainingCredits);
-      } catch (e) {
-        console.log("hello world", e);
-        console.error(e);
-      }
+    if (!currentPick && ZBetAmount.safeParse(betAmount).success) {
+      return;
     }
-  };
+
+    try {
+      const response = await fetch("/api/pick", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          matchId: match.id,
+          result: currentPick,
+          betAmount,
+        }),
+      });
+
+      if (response.status === 403) {
+        const { error } = await response.json();
+        enqueueSnackbar(error, { variant: "error" });
+        return;
+      }
+
+      const { remainingCredits, betAmount: newBetAmount } =
+        await response.json();
+      updateUserCredits(remainingCredits);
+      setBetAmount(newBetAmount);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [match.id, betAmount, currentPick]);
 
   const debouncedApiCall = useRef(debounce(makeApiCall, 500)).current;
-
-  useEffect(() => {
-    debouncedApiCall();
-  }, [currentPick, betAmount, debouncedApiCall]);
 
   return (
     <Box
@@ -125,13 +121,14 @@ const MatchComponent = ({
       flexDirection="column"
       mt={2}
       sx={{
-        backgroundColor: "rgb(211, 211, 211, 1)",
+        background:
+          "linear-gradient(to bottom right, rgb(211, 211, 211), rgb(150, 160, 155))",
         border: "0px solid #FFFFFF",
         borderRadius: "50px",
         overflow: "hidden",
         p: 1,
-        width: '100%',
-        boxShadow: '3px 4px 5px rgba(0, 0, 0, 0.5)'
+        width: "100%",
+        boxShadow: "3px 4px 5px rgba(0, 0, 0, 0.5)",
       }}
     >
       <Typography
@@ -158,7 +155,10 @@ const MatchComponent = ({
         <Box m={1}>
           <Button
             variant={currentPick == Result.HOME_TEAM ? "contained" : "outlined"}
-            onClick={() => setCurrentPick(Result.HOME_TEAM)}
+            onClick={() => {
+              setCurrentPick(Result.HOME_TEAM);
+              debouncedApiCall();
+            }}
             disabled={disabledToday(new Date(match.startTime))}
             sx={{ borderColor: "primary.main", borderRadius: "12px" }}
           >
@@ -184,7 +184,10 @@ const MatchComponent = ({
         <Box m={1}>
           <Button
             variant={currentPick == Result.DRAW ? "contained" : "outlined"}
-            onClick={() => setCurrentPick(Result.DRAW)}
+            onClick={() => {
+              setCurrentPick(Result.DRAW);
+              debouncedApiCall();
+            }}
             disabled={disabledToday(new Date(match.startTime))}
             sx={{ borderColor: "primary.main", borderRadius: "12px" }}
           >
@@ -197,7 +200,10 @@ const MatchComponent = ({
         <Box m={1}>
           <Button
             variant={currentPick == Result.AWAY_TEAM ? "contained" : "outlined"}
-            onClick={() => setCurrentPick(Result.AWAY_TEAM)}
+            onClick={() => {
+              setCurrentPick(Result.AWAY_TEAM);
+              debouncedApiCall();
+            }}
             disabled={disabledToday(new Date(match.startTime))}
             sx={{ borderColor: "primary.main", borderRadius: "12px" }}
           >
@@ -238,10 +244,7 @@ const MatchComponent = ({
             value={betAmount}
             type="number"
             size="small"
-            sx={{
-              width: "260px",
-              //backgroundColor: 'white'
-            }}
+            sx={{ width: "260px" }}
             inputProps={{ step: "0.01", min: "0" }}
             InputProps={{
               endAdornment: (
@@ -257,6 +260,7 @@ const MatchComponent = ({
             }}
             onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
               setBetAmount(event.target.value && Number(event.target.value));
+              debouncedApiCall();
             }}
             onBlur={() => setBetAmount(betAmount || 0)}
             disabled={disabledToday(new Date(match.startTime))}
@@ -266,7 +270,9 @@ const MatchComponent = ({
           <Button
             variant="text"
             onClick={() => {
+              setCurrentPick("");
               setBetAmount(0);
+              debouncedApiCall();
             }}
             disabled={disabledToday(new Date(match.startTime))}
             sx={{ fontSize: "16px", fontWeight: "bold" }}

@@ -3,6 +3,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { disabledToday } from "../../../lib/config";
 import prisma from "../../../lib/prisma";
 import { User } from "@prisma/client";
+import { roundNumber } from "@/utils/numberUtils";
 
 const getUserCreditsView = async (userId: number) => {
   const user = (await prisma.$queryRaw`
@@ -14,19 +15,48 @@ const getUserCreditsView = async (userId: number) => {
   }[];
 
   return user[0];
-}
+};
 
 export default async function handle(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const { matchId, result, betAmount } = req.body;
+  const { matchId, result, betAmount: betAmountInit } = req.body;
+
+  const betAmount = roundNumber(betAmountInit);
 
   const session = await auth(req, res);
 
   if (!session?.user.id) {
     res.statusCode = 403;
-    return { error: "Please sign in" };
+    return res.json({ error: "Please sign in" });
+  }
+
+  if (betAmount < 0) {
+    res.statusCode = 403;
+    return res.json({ error: "Invalid bet amount" });
+  }
+
+  if (!result || result === "") {
+    try {
+      await prisma.pick.delete({
+        where: {
+          userId_matchId: {
+            userId: session.user.id,
+            matchId,
+          },
+        },
+      });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      const updatedUser = await getUserCreditsView(session.user.id);
+
+      return res.json({
+        remainingCredits: updatedUser.remainingCredits,
+        betAmount: 0,
+      });
+    }
   }
 
   const pick = await prisma.pick.findFirst({
@@ -45,7 +75,10 @@ export default async function handle(
 
   const user = await getUserCreditsView(session.user.id);
 
-  if (!user || betAmount > user?.remainingCredits) {
+  if (
+    !user ||
+    (betAmount > user?.remainingCredits && pick && pick?.betAmount < betAmount)
+  ) {
     res.statusCode = 403;
     res.json({ error: "Failed to make bet. Not enough remaining credits." });
     return;
@@ -70,7 +103,7 @@ export default async function handle(
 
     const updatedUser = await getUserCreditsView(session.user.id);
 
-    res.json({ remainingCredits: updatedUser.remainingCredits });
+    res.json({ remainingCredits: updatedUser.remainingCredits, betAmount });
   } else {
     await prisma.pick.create({
       data: {
@@ -81,6 +114,9 @@ export default async function handle(
       },
     });
 
-    res.json({ remainingCredits: user.remainingCredits - betAmount });
+    res.json({
+      remainingCredits: user.remainingCredits - betAmount,
+      betAmount,
+    });
   }
 }
