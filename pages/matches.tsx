@@ -15,6 +15,7 @@ import MatchComponent from "../components/matches/Match";
 import prisma from "../lib/prisma";
 import { theme } from "./_app";
 import { ImagesearchRoller } from "@mui/icons-material";
+import { roundNumber } from "@/utils/numberUtils";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await auth(context);
@@ -186,7 +187,7 @@ const Matches: NextPage<Props> = ({ matches, filteredUrls, userCredits }) => {
               fontWeight: "bold",
             }}
           >
-            Your Credits: {currenUserCredits}
+            Your Credits: {roundNumber(currenUserCredits)}
           </Box>
           <Box
             display="flex"
