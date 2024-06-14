@@ -6,7 +6,7 @@ import {
   Typography,
   debounce,
   styled,
-  useMediaQuery
+  useMediaQuery,
 } from "@mui/material";
 import { Match, Result, Team } from "@prisma/client";
 import { format } from "date-fns";
@@ -38,7 +38,11 @@ type Props = {
 
 const ZBetAmount = z.number().min(0);
 
-const usePotentialWin = (betAmount: number | '', match: Match, currentPick: Result | '') => {
+const usePotentialWin = (
+  betAmount: number | "",
+  match: Match,
+  currentPick: Result | ""
+) => {
   const [potentialWin, setPotentialWin] = useState<number>(0);
 
   useEffect(() => {
@@ -60,8 +64,7 @@ const usePotentialWin = (betAmount: number | '', match: Match, currentPick: Resu
   }, [betAmount, currentPick, match]);
 
   return potentialWin;
-}
-
+};
 
 const MatchComponent = ({
   match,
@@ -74,6 +77,8 @@ const MatchComponent = ({
   const [betAmount, setBetAmount] = useState<number | "">(
     () => initialBetAmount
   );
+  const [chosenCurrentPick, setChosenCurrentPick] = useState<Result | ''>(() => result);
+  const [chosenBetAmount, setChosenBetAmount] = useState<number | ''>(() => initialBetAmount);
   const potentialWin = usePotentialWin(betAmount, match, currentPick);
   const { enqueueSnackbar } = useSnackbar();
 
@@ -81,11 +86,10 @@ const MatchComponent = ({
 
   useEffect(() => {
     latestValues.current = { currentPick, betAmount };
-  }, [betAmount, currentPick, match]);
+  }, [match, betAmount, currentPick]);
 
   const makeApiCall = useCallback(async () => {
     const { currentPick, betAmount } = latestValues.current;
-
     if (!currentPick && !ZBetAmount.safeParse(betAmount).success) {
       return;
     }
@@ -106,15 +110,16 @@ const MatchComponent = ({
         enqueueSnackbar(error, { variant: "error" });
         return;
       }
-
       const { remainingCredits, betAmount: newBetAmount } =
         await response.json();
       updateUserCredits(remainingCredits);
       setBetAmount(newBetAmount);
+      enqueueSnackbar("Bet placed successfully!", { variant: "success" });
     } catch (e) {
       console.error(e);
+      enqueueSnackbar("An unexpected error occurred.", { variant: "error" });
     }
-  }, [match.id, betAmount, currentPick]);
+  }, [match.id]);
 
   const debouncedApiCall = useRef(debounce(makeApiCall, 500)).current;
 
@@ -162,7 +167,6 @@ const MatchComponent = ({
             variant={currentPick == Result.HOME_TEAM ? "contained" : "outlined"}
             onClick={() => {
               setCurrentPick(Result.HOME_TEAM);
-              debouncedApiCall();
             }}
             disabled={disabledToday(new Date(match.startTime))}
             sx={{ borderColor: "primary.main", borderRadius: "12px" }}
@@ -191,7 +195,6 @@ const MatchComponent = ({
             variant={currentPick == Result.DRAW ? "contained" : "outlined"}
             onClick={() => {
               setCurrentPick(Result.DRAW);
-              debouncedApiCall();
             }}
             disabled={disabledToday(new Date(match.startTime))}
             sx={{ borderColor: "primary.main", borderRadius: "12px" }}
@@ -207,7 +210,6 @@ const MatchComponent = ({
             variant={currentPick == Result.AWAY_TEAM ? "contained" : "outlined"}
             onClick={() => {
               setCurrentPick(Result.AWAY_TEAM);
-              debouncedApiCall();
             }}
             disabled={disabledToday(new Date(match.startTime))}
             sx={{ borderColor: "primary.main", borderRadius: "12px" }}
@@ -265,7 +267,6 @@ const MatchComponent = ({
             }}
             onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
               setBetAmount(event.target.value && Number(event.target.value));
-              debouncedApiCall();
             }}
             onBlur={() => setBetAmount(betAmount || 0)}
             disabled={disabledToday(new Date(match.startTime))}
@@ -286,6 +287,29 @@ const MatchComponent = ({
           </Button>
         </Box>
       </Grid>
+      <Box m={0.5} alignItems={"center"} display="flex">
+        <Button
+          variant="text"
+          onClick={() => {
+            makeApiCall();
+          }}
+          disabled={disabledToday(new Date(match.startTime))}
+          sx={{
+            fontSize: "16px",
+            fontWeight: "bold",
+            borderWidth: "3px",
+            borderRadius: "12px",
+            borderColor: "primary.main",
+            borderStyle: "solid",
+            "&:active": {
+              backgroundColor: "primary.main",
+              color: "white",
+            },
+          }}
+        >
+          Place Bet
+        </Button>
+      </Box>
       <style jsx>{`
         .crest_img {
           height: 20px;
