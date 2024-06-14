@@ -24,7 +24,7 @@ export const getStaticProps: GetStaticProps = async () => {
     image: User["image"];
     credits: User["credits"];
     points: User["points"];
-    remainingCredits: number;
+    remainingcredits: number;
   }[] = await prisma.$queryRaw`
     SELECT
       "User".name as name,
@@ -56,7 +56,7 @@ export type LeaderBoardUser = {
   image: User["image"];
   credits: User["credits"];
   points: User["points"];
-  remainingCredits: number;
+  remainingcredits: number;
 };
 
 type Props = {
