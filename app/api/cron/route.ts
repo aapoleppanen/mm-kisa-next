@@ -11,12 +11,12 @@ export async function GET() {
     const player = await updatePlayerOdds();
     const match = await updateMatchOdds();
 
-    Response.json({ team, player, match });
+    return Response.json({ team, player, match });
   }
 
   const results = await updateResults();
   const matchOdds = await updateMatchOdds();
   const playerPoints = await updatePlayerPoints()
 
-  Response.json({ results, matchOdds, playerPoints });
+  return Response.json({ results, matchOdds, playerPoints });
 }

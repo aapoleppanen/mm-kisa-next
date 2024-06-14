@@ -3,7 +3,7 @@ import { withAccelerate } from "@prisma/extension-accelerate";
 
 let prisma: PrismaClient;
 
-const initializePrisma = (withLogging: boolean = true) => {
+const initializePrisma = (withLogging: boolean = false) => {
   if (!withLogging) {
     return new PrismaClient().$extends(withAccelerate()) as unknown as PrismaClient;
   }
