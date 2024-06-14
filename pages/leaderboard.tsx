@@ -39,8 +39,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   }[] = await prisma.$queryRaw`
     SELECT
       "User".name as name, "User".id AS id, "User".image as image, "User".credits as credits, "User".points as points,
-      CAST(COALESCE(SUM("Pick"."betAmount" * odds), 0) AS INTEGER) AS winnings,
-      "User"."remainingCredits" as remainingCredits
+      CAST(COALESCE(SUM("Pick"."betAmount" * odds), 0) AS INTEGER) AS winnings, ucv."remainingCredits" as remainingCredits
     FROM (
       SELECT "homeWinOdds" AS odds, id, result
       FROM "Match"
@@ -62,7 +61,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       FROM "Player"
       WHERE "Player".id = 95
     ) AS player ON player.id = "User"."playerId" AND player.id = 95
-    GROUP BY "User".id, "User".name, "Team"."winningOdds", playerOdds
+    LEFT JOIN "UserCreditsView" ucv ON ucv."userId" = "User".id
+    GROUP BY "User".id, "User".name, "Team"."winningOdds", playerOdds, ucv."remainingCredits"
     ORDER BY winnings DESC;
   `;
 
