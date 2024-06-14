@@ -110,11 +110,12 @@ const MatchComponent = ({
         enqueueSnackbar(error, { variant: "error" });
         return;
       }
-      const { remainingCredits, betAmount: newBetAmount } =
+      const { remainingCredits, betAmount: newBetAmount, notification } =
         await response.json();
       updateUserCredits(remainingCredits);
       setBetAmount(newBetAmount);
-      enqueueSnackbar("Bet placed successfully!", { variant: "success" });
+      if (notification) enqueueSnackbar(notification, { variant: "success" });
+      else enqueueSnackbar("Bet placed successfully!", { variant: "success" });
     } catch (e) {
       console.error(e);
       enqueueSnackbar("An unexpected error occurred.", { variant: "error" });

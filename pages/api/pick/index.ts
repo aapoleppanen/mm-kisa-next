@@ -55,6 +55,7 @@ export default async function handle(
       return res.json({
         remainingCredits: updatedUser.remainingCredits,
         betAmount: 0,
+        notification: "Cleared bet succesfully",
       });
     }
   }
