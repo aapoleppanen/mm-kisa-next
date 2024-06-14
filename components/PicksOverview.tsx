@@ -5,12 +5,16 @@ import MatchDetails from "./userPicks/MatchDetails";
 
 const PicksOverview = ({
   picks,
-  user,
+  user
 }: {
-  picks: UserPicks;
+  picks: UserPicks | null;
   user: LeaderBoardUser;
-}) => (
-  <Box py={2}>
+}) => {
+  if (!picks) return <Box>No picks</Box>;
+
+
+  return (
+  <Box py={2} minHeight="300px">
     <UserInfo user={user} />
     <Divider sx={{ my: 2 }} />
     <Grid container>
@@ -38,5 +42,6 @@ const PicksOverview = ({
     <MatchDetails picks={picks} />
   </Box>
 );
+}
 
 export default PicksOverview;
