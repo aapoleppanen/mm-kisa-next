@@ -32,7 +32,7 @@ if (process.env.NODE_ENV === "production") {
     prisma: PrismaClient;
   };
   if (!globalWithPrisma.prisma) {
-    globalWithPrisma.prisma = initializePrisma(true);
+    globalWithPrisma.prisma = initializePrisma();
   }
   prisma = globalWithPrisma.prisma;
 }

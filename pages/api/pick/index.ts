@@ -37,7 +37,7 @@ export default async function handle(
     return res.json({ error: "Invalid bet amount" });
   }
 
-  if (!result || result === "") {
+  if (!result || result === "" || betAmount === 0) {
     try {
       await prisma.pick.delete({
         where: {

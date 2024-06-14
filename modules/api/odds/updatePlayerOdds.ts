@@ -28,7 +28,7 @@ export const updatePlayerOdds = async () => {
             },
           });
 
-          console.log(res);
+          // console.log(res);
         });
       }
     });

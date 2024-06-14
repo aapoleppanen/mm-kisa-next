@@ -5,7 +5,6 @@ import { euro2024Variables, events } from "../../../pages/api/odds/queries";
 import { EventsResponse } from "../../../pages/api/odds/types";
 import {
   VeikkausFDEuroTeamMap,
-  VeikkausFDWorldCupTeamMap,
 } from "../../../utils/adapterUtils";
 
 const VeikkausFDTeamMap = VeikkausFDEuroTeamMap; // VeikkausFDWorldCupTeamMap
@@ -71,7 +70,7 @@ export const updateMatchOdds = async () => {
                   },
                 });
 
-                console.log(res);
+                // console.log(res);
               }
             }
           }

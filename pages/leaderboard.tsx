@@ -29,7 +29,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     };
   }
   const users: {
-    total: number;
     name: User["name"];
     id: User["id"];
     image: User["image"];
@@ -39,7 +38,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     remainingCredits: number;
   }[] = await prisma.$queryRaw`
     SELECT
-      CAST(COALESCE(SUM(odds), 0) + COALESCE("Team"."winningOdds", 0) + COALESCE(playerOdds, 0) AS INTEGER) AS total,
       "User".name as name, "User".id AS id, "User".image as image, "User".credits as credits, "User".points as points,
       CAST(COALESCE(SUM("Pick"."betAmount" * odds), 0) AS INTEGER) AS winnings,
       "User"."remainingCredits" as remainingCredits
@@ -74,7 +72,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 };
 
 export type LeaderBoardUser = {
-  total: number;
   name: string;
   id: string;
   image: string;

@@ -12,6 +12,7 @@ export default async function handle(req: NextApiRequest, res: NextApiResponse) 
 
     res.json({ team, player, match });
   }
+
   const match = await updateMatchOdds();
   res.json({ match });
 }

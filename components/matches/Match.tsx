@@ -38,26 +38,11 @@ type Props = {
 
 const ZBetAmount = z.number().min(0);
 
-const MatchComponent = ({
-  match,
-  result,
-  betAmount: initialBetAmount,
-  updateUserCredits,
-}: Props) => {
-  const mobile = useMediaQuery(theme.breakpoints.down("lg"));
-  const [currentPick, setCurrentPick] = useState<Result | "">(() => result);
-  const [betAmount, setBetAmount] = useState<number | "">(
-    () => initialBetAmount
-  );
+const usePotentialWin = (betAmount: number | '', match: Match, currentPick: Result | '') => {
   const [potentialWin, setPotentialWin] = useState<number>(0);
-  const { enqueueSnackbar } = useSnackbar();
-
-  const latestValues = useRef({ currentPick, betAmount });
 
   useEffect(() => {
-    latestValues.current = { currentPick, betAmount };
-
-    if (!betAmount) {
+    if (!betAmount || !currentPick) {
       setPotentialWin(0);
     } else {
       setPotentialWin(
@@ -74,14 +59,34 @@ const MatchComponent = ({
     }
   }, [betAmount, currentPick, match]);
 
+  return potentialWin;
+}
+
+
+const MatchComponent = ({
+  match,
+  result,
+  betAmount: initialBetAmount,
+  updateUserCredits,
+}: Props) => {
+  const mobile = useMediaQuery(theme.breakpoints.down("lg"));
+  const [currentPick, setCurrentPick] = useState<Result | "">(() => result);
+  const [betAmount, setBetAmount] = useState<number | "">(
+    () => initialBetAmount
+  );
+  const potentialWin = usePotentialWin(betAmount, match, currentPick);
+  const { enqueueSnackbar } = useSnackbar();
+
+  const latestValues = useRef({ currentPick, betAmount });
+
+  useEffect(() => {
+    latestValues.current = { currentPick, betAmount };
+  }, [betAmount, currentPick, match]);
+
   const makeApiCall = useCallback(async () => {
     const { currentPick, betAmount } = latestValues.current;
 
     if (!currentPick && !ZBetAmount.safeParse(betAmount).success) {
-      return;
-    }
-
-    if (!currentPick && ZBetAmount.safeParse(betAmount).success) {
       return;
     }
 

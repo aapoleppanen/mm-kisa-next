@@ -52,7 +52,7 @@ export const updateResults = async () => {
             },
           });
 
-          console.log(matchRes);
+          // console.log(matchRes);
         }
       } catch (e) {
         console.error(e);

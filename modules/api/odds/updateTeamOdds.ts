@@ -3,7 +3,7 @@ import { veikkausGraphQlEndpoint } from "../../../lib/config";
 import prisma from "../../../lib/prisma";
 import { euro2024Variables, events } from "../../../pages/api/odds/queries";
 import { EventsResponse } from "../../../pages/api/odds/types";
-import { VeikkausFDWorldCupTeamMap } from "../../../utils/adapterUtils";
+import { VeikkausFDEuroTeamMap } from "../../../utils/adapterUtils";
 
 export const updateTeamOdds = async () => {
   try {
@@ -16,15 +16,21 @@ export const updateTeamOdds = async () => {
     response.sports[0].tournaments[0].events.forEach(async (event) => {
       if (event.name == "Euro 2024 - Mestari") {
         event.ebetDraws[0].row.competitors.forEach(async (comp) => {
+          console.log(comp, VeikkausFDEuroTeamMap[comp.name])
+
+          const name = VeikkausFDEuroTeamMap[comp.name];
+
+          if (!name) return
+
           const res = await prisma.team.update({
             where: {
-              name: VeikkausFDWorldCupTeamMap[comp.name],
+              name,
             },
             data: {
               winningOdds: comp.odds,
             },
           });
-          console.log(res);
+          // console.log(res);
         });
       }
     });
