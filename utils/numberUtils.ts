@@ -1,17 +1,18 @@
 import { z } from "zod";
 
 export const roundNumber = (
-  num: number | string,
+  num: number | string | undefined,
   decimalPlaces: number = 2
 ) => {
-  const result = z.number().safeParse(num);
+  console.log(num)
+  if (num === undefined || num === null) return 0;
+
+  const parsedNum = typeof num === 'string' ? parseFloat(num) : num;
+  const result = z.number().safeParse(parsedNum);
 
   if (!result.success) return 0;
 
   return Number(
-    result.data.toLocaleString(undefined, {
-      maximumFractionDigits: decimalPlaces,
-      minimumFractionDigits: decimalPlaces,
-    })
+    result.data.toFixed(decimalPlaces)
   );
 };
