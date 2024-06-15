@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { NextApiRequest, NextApiResponse } from "next";
-import { disabledToday } from "../../../lib/config";
+import { disabledToday, maxBetAmount } from "../../../lib/config";
 import prisma from "../../../lib/prisma";
 import { User } from "@prisma/client";
 import { roundNumber } from "@/utils/numberUtils";
@@ -32,7 +32,7 @@ export default async function handle(
     return res.json({ error: "Please sign in" });
   }
 
-  if (betAmount < 0) {
+  if (betAmount < 0 || betAmount > maxBetAmount) {
     res.statusCode = 403;
     return res.json({ error: "Invalid bet amount" });
   }

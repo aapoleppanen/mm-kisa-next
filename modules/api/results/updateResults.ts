@@ -15,7 +15,7 @@ export const updateResults = async () => {
 
     json.matches.forEach(async (match: Match) => {
       try {
-        if (match.awayTeam.name && match.awayTeam.name) {
+        if (match.awayTeam.name && match.homeTeam.name) {
           const awayTeam = await prisma.team.findUnique({
             where: {
               name: match.awayTeam.name,
@@ -31,7 +31,7 @@ export const updateResults = async () => {
           if (!awayTeam)
             throw new Error(`Away team not found ${match.awayTeam.name}`);
           if (!homeTeam)
-            throw new Error(`Away team not found ${match.homeTeam.name}`);
+            throw new Error(`Home team not found ${match.homeTeam.name}`);
 
           const matchRes = await prisma.match.upsert({
             where: {

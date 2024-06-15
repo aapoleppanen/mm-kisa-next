@@ -14,7 +14,7 @@ import Image from "next/image";
 import { useSnackbar } from "notistack";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import { disabledToday } from "../../lib/config";
+import { disabledToday, maxBetAmount } from "../../lib/config";
 import { theme } from "../../pages/_app";
 
 const StyledBox = styled(Box)(() => ({
@@ -77,8 +77,6 @@ const MatchComponent = ({
   const [betAmount, setBetAmount] = useState<number | "">(
     () => initialBetAmount
   );
-  const [chosenCurrentPick, setChosenCurrentPick] = useState<Result | ''>(() => result);
-  const [chosenBetAmount, setChosenBetAmount] = useState<number | ''>(() => initialBetAmount);
   const potentialWin = usePotentialWin(betAmount, match, currentPick);
   const { enqueueSnackbar } = useSnackbar();
 
@@ -91,6 +89,10 @@ const MatchComponent = ({
   const makeApiCall = useCallback(async () => {
     const { currentPick, betAmount } = latestValues.current;
     if (!currentPick && !ZBetAmount.safeParse(betAmount).success) {
+      return;
+    }
+    if (!ZBetAmount.safeParse(betAmount).success || Number(betAmount) > 50) {
+      enqueueSnackbar(`Invalid bet amount (max allowed bet: ${maxBetAmount})`, { variant: "error" });
       return;
     }
 
@@ -110,8 +112,11 @@ const MatchComponent = ({
         enqueueSnackbar(error, { variant: "error" });
         return;
       }
-      const { remainingCredits, betAmount: newBetAmount, notification } =
-        await response.json();
+      const {
+        remainingCredits,
+        betAmount: newBetAmount,
+        notification,
+      } = await response.json();
       updateUserCredits(remainingCredits);
       setBetAmount(newBetAmount);
       if (notification) enqueueSnackbar(notification, { variant: "success" });
@@ -253,7 +258,11 @@ const MatchComponent = ({
             type="number"
             size="small"
             sx={{ width: "260px" }}
-            inputProps={{ step: "0.01", min: "0" }}
+            inputProps={{
+              step: "0.01",
+              min: "0",
+              max: maxBetAmount.toString(),
+            }}
             InputProps={{
               endAdornment: (
                 <Box
