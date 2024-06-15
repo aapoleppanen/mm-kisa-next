@@ -6,6 +6,7 @@ import { EventsResponse } from "../../../pages/api/odds/types";
 import {
   VeikkausFDEuroTeamMap,
 } from "../../../utils/adapterUtils";
+import { add } from "date-fns";
 
 const VeikkausFDTeamMap = VeikkausFDEuroTeamMap; // VeikkausFDWorldCupTeamMap
 
@@ -19,7 +20,7 @@ export const updateMatchOdds = async () => {
 
     response.sports[0].tournaments[0].events
       .filter((event) => {
-        return event.type == "Fixture";
+        return event.type == "Fixture"
       })
       .forEach(async (event) => {
         event.ebetDraws.forEach(async (draw) => {
@@ -55,6 +56,9 @@ export const updateMatchOdds = async () => {
                 where: {
                   homeId: homeTeam.id,
                   awayId: awayTeam.id,
+                  startTime: {
+                    gte: add(new Date(), { hours: 1 }),
+                  }
                 },
               });
 
