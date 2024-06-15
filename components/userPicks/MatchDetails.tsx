@@ -46,8 +46,8 @@ const MatchDetails = ({ picks }: { picks: UserPicks }) => (
     </Box>
     <Grid container rowGap={1}>
       {picks.picks.map((p) => (
-        <Grid container rowGap={1}>
-          <Grid item md={8} xs={12} key={p.id}>
+        <Grid container rowGap={1} key={p.id}>
+          <Grid item md={8} xs={12}>
             <ItemPick key={p.id} p={p} />
           </Grid>
           <Grid
