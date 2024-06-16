@@ -4,6 +4,7 @@ import { updatePlayerOdds } from "@/modules/api/odds/updatePlayerOdds";
 import { updateTeamOdds } from "@/modules/api/odds/updateTeamOdds";
 import { updatePlayerPoints } from "@/modules/api/results/updatePlayerPoints";
 import { updateResults } from "@/modules/api/results/updateResults";
+import { revalidatePath } from "next/cache";
 
 export const dynamic = 'force-dynamic'
 
@@ -19,6 +20,8 @@ export async function GET() {
   const results = await updateResults();
   const matchOdds = await updateMatchOdds();
   const playerPoints = await updatePlayerPoints()
+
+  revalidatePath('/leaderboard')
 
   return Response.json({ results, matchOdds, playerPoints });
 }
