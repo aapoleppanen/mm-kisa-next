@@ -5,6 +5,8 @@ import { updateTeamOdds } from "@/modules/api/odds/updateTeamOdds";
 import { updatePlayerPoints } from "@/modules/api/results/updatePlayerPoints";
 import { updateResults } from "@/modules/api/results/updateResults";
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   if (!disablePrePicks()) {
     const team = await updateTeamOdds();
