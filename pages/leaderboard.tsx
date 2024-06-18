@@ -17,7 +17,7 @@ const StyledBox = styled(Box)({
   textShadow: "0px 2px 4px rgba(255, 255, 255, 0.3)",
 });
 
-export const getStaticProps: GetStaticProps = async () => {
+export const getServerSideProps = async () => {
   const users: {
     name: User["name"];
     id: User["id"];
@@ -46,7 +46,7 @@ export const getStaticProps: GetStaticProps = async () => {
 
   return {
     props: { users },
-    revalidate: 60 * 30,
+    // revalidate: 60 * 30,
   };
 };
 
