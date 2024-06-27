@@ -13,6 +13,12 @@ const App = ({ Component, pageProps }: AppProps<{ session: Session }>) => {
   const getLayout = Component.getLayout || ((page) => <Layout>{page}</Layout>);
 
   return (
+    <div>
+      In Maintenance. Should be up by tomorrow (Friday, 28/6). Sorry for the inconvenience.
+    </div>
+  )
+
+  return (
     <SessionProvider session={pageProps.session}>
       <ThemeProvider theme={theme}>
         <SnackbarProvider autoHideDuration={3000} >
