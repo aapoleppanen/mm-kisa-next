@@ -40,38 +40,40 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     },
   });
 
-  const supabase = createClient();
-  const { data: emKisaNextContents, error } = await supabase.storage
-    .from("em-kisa-next")
-    .list("");
+  // const supabase = createClient();
+  // const { data: emKisaNextContents, error } = await supabase.storage
+  //   .from("em-kisa-next")
+  //   .list("");
 
-  if (error) {
-    console.error(
-      "Error fetching contents from Supabase Storage:",
-      error.message
-    );
-    return {
-      props: {
-        error: "Failed to fetch contents from Supabase Storage",
-      },
-    };
-  }
+  // if (error) {
+  //   console.error(
+  //     "Error fetching contents from Supabase Storage:",
+  //     error.message
+  //   );
+  //   return {
+  //     props: {
+  //       error: "Failed to fetch contents from Supabase Storage",
+  //     },
+  //   };
+  // }
 
-  const fetchPublicUrl = async (filePath: string) => {
-    if (!filePath.startsWith("background")) {
-      return null;
-    }
-    const { data } = await supabase.storage
-      .from("em-kisa-next")
-      .getPublicUrl(filePath);
-    return data.publicUrl;
-  };
+  // const fetchPublicUrl = async (filePath: string) => {
+  //   if (!filePath.startsWith("background")) {
+  //     return null;
+  //   }
+  //   const { data } = await supabase.storage
+  //     .from("em-kisa-next")
+  //     .getPublicUrl(filePath);
+  //   return data.publicUrl;
+  // };
 
-  const publicUrls = await Promise.all(
-    emKisaNextContents.map((item) => fetchPublicUrl(item.name))
-  );
+  // const publicUrls = await Promise.all(
+  //   emKisaNextContents.map((item) => fetchPublicUrl(item.name))
+  // );
 
-  const filteredUrls = publicUrls.filter((url) => url !== null);
+  // const filteredUrls = publicUrls.filter((url) => url !== null);
+  const url = "https://storage.googleapis.com/em-kisa-2024-bucket/background_6.jpg"
+
   const matches = await prisma.match.findMany({
     include: {
       away: true,
@@ -96,7 +98,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   return {
     props: {
       matches: JSON.parse(JSON.stringify(matches)),
-      filteredUrls,
+      url,
       userCredits,
     },
   };
@@ -108,7 +110,8 @@ type Props = {
     home: Team;
     Pick?: [Pick];
   })[];
-  filteredUrls: string[];
+  // filteredUrls: string[];
+  url: string;
   userCredits: {
     remainingCredits: number;
   };
@@ -116,13 +119,13 @@ type Props = {
 interface AltsDictionary {
   [key: string]: string;
 }
-const Matches: NextPage<Props> = ({ matches, filteredUrls, userCredits }) => {
-  const [currentBackgroundIndex, setCurrentBackgroundIndex] = useState(() => {
-    const currentDate = new Date();
-    const totalImages = filteredUrls.length;
-    const index = currentDate.getDate() % totalImages;
-    return index;
-  });
+const Matches: NextPage<Props> = ({ matches, url, userCredits }) => {
+  // const [currentBackgroundIndex, setCurrentBackgroundIndex] = useState(() => {
+  //   const currentDate = new Date();
+  //   const totalImages = filteredUrls.length;
+  //   const index = currentDate.getDate() % totalImages;
+  //   return index;
+  // });
   const [currenUserCredits, setCurrentUserCredits] = useState(
     userCredits.remainingCredits
   );
@@ -137,9 +140,9 @@ const Matches: NextPage<Props> = ({ matches, filteredUrls, userCredits }) => {
           alignItems="center"
           justifyContent="center"
         >
-          {filteredUrls && (
+          {url && (
             <Image
-              src={filteredUrls[currentBackgroundIndex]} // this works if profile is used here
+              src={url} // this works if profile is used here
               alt="background"
               width="100"
               height="100"

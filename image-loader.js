@@ -12,5 +12,9 @@ export default function supabaseLoader({ src, width, quality }) {
   if (src.startsWith('/public/assets')) {
     return `http://localhost:3000/_next/static/media${src}`;
   }
+
+  // hotfix: this should use the same image from Google Cloud Storage
+  return `https://storage.googleapis.com/em-kisa-2024-bucket/${src}`
+
   return `https://${projectId}.supabase.co/storage/v1/object/public/em-kisa-next/${src}?width=${width}&quality=${quality || 75}`
 }

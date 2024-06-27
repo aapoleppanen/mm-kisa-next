@@ -76,7 +76,10 @@ export default function Avatar({
       ) : (
         <div className="avatar no-image" style={{ height: size, width: size }} />
       )}
-      <div style={{ width: size }}>
+      <div>
+        Changing profile pictures is disabled for now.
+      </div>
+      {/* <div style={{ width: size }}>
         <label className="button primary block" htmlFor="single">
           {uploading ? 'Uploading ...' : 'Upload'}
         </label>
@@ -91,7 +94,7 @@ export default function Avatar({
           onChange={uploadAvatar}
           disabled={uploading}
         />
-      </div>
+      </div> */}
     </div>
   )
 }
