@@ -1,21 +1,12 @@
-import { Box, Button, Card, Grid, Paper, useMediaQuery } from "@mui/material";
+import { auth } from "@/auth";
+import { roundNumber } from "@/utils/numberUtils";
+import { Box, Grid } from "@mui/material";
 import { Match, Pick, Result, Team } from "@prisma/client";
 import { isSameDay } from "date-fns";
 import { GetServerSideProps, NextPage } from "next";
-import React, { useState, useEffect } from "react";
-import { createClient } from "@/supabase/client";
-import Image from "next/image";
-import { auth } from "@/auth";
-import useSWR, { Fetcher } from "swr";
-import BottomNav from "../components/BottomNav";
-import Header from "../components/Header";
-import profile from "../public/assets/1.jpg";
-import Leaderboard from "../components/Leaderboard";
+import { useState } from "react";
 import MatchComponent from "../components/matches/Match";
 import prisma from "../lib/prisma";
-import { theme } from "./_app";
-import { ImagesearchRoller } from "@mui/icons-material";
-import { roundNumber } from "@/utils/numberUtils";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await auth(context);
@@ -141,21 +132,34 @@ const Matches: NextPage<Props> = ({ matches, url, userCredits }) => {
           justifyContent="center"
         >
           {url && (
-            <Image
-              src={url} // this works if profile is used here
-              alt="background"
-              width="100"
-              height="100"
-              style={{
-                position: "fixed",
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                left: 0,
-                top: 0,
-                zIndex: -1,
-                // filter: "saturate(20%) contrast(60%)"
-              }}
+            // <Image
+            //   src={url} // this works if profile is used here
+            //   alt="background"
+            //   width="100"
+            //   height="100"
+            //   style={{
+            //     position: "fixed",
+            //     width: "100%",
+            //     height: "100%",
+            //     objectFit: "cover",
+            //     left: 0,
+            //     top: 0,
+            //     zIndex: -1,
+            //     // filter: "saturate(20%) contrast(60%)"
+            //   }}
+            // />
+            <img
+            src={url}
+            alt="background"
+            style={{
+              position: "fixed",
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              left: 0,
+              top: 0,
+              zIndex: -1,
+            }}
             />
           )}
           <Box

@@ -1,20 +1,18 @@
-import { auth } from "@/auth";
-import { styled } from "@mui/system";
+import { Loader } from "@/components/loader";
+import { cloudStorageLoader } from "@/utils/imageUtils";
+import { roundNumber } from "@/utils/numberUtils";
 import { Box, Collapse, Divider } from "@mui/material";
+import { styled } from "@mui/system";
 import { Match, Pick, Player, Team, User } from "@prisma/client";
-import { GetServerSideProps, GetStaticProps } from "next";
 import { useState } from "react";
 import PicksOverview from "../components/PicksOverview";
 import prisma from "../lib/prisma";
-import Image from "next/image";
-import { roundNumber } from "@/utils/numberUtils";
-import { Loader } from "@/components/loader";
 
 const StyledBox = styled(Box)({
   fontSize: "20px",
   color: "black",
   fontWeight: "bold",
-  textShadow: "0px 2px 4px rgba(255, 255, 255, 0.3)",
+  // textShadow: "0px 2px 4px rgba(255, 255, 255, 0.3)",
 });
 
 export const getServerSideProps = async () => {
@@ -124,7 +122,6 @@ const LeaderboardPage = ({ users }: Props) => {
             cursor: "pointer",
             borderRadius: "12px",
             backgroundColor: "#f0f0f0",
-            boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
             transition: "background-color 0.1s ease",
             "&:hover": {
               backgroundColor: "rgb(211, 211, 211)",
@@ -140,11 +137,12 @@ const LeaderboardPage = ({ users }: Props) => {
           >
             <Box display="flex" alignItems="center" gap={1}>
               {user.image && (
-                <Image
-                  src={user.image}
-                  alt="profile_image"
+                <img
+                  src={cloudStorageLoader({ src: user.image })}
+                  alt=""
                   width={45}
                   height={45}
+                  style={{ objectFit: "cover", overflow: 'none' }}
                 />
               )}
               <StyledBox>{user.name}</StyledBox>

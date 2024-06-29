@@ -1,5 +1,4 @@
 import { Box, Grid } from "@mui/material";
-import Image from "next/image";
 import { UserPicks } from "@/pages/leaderboard";
 
 type ArrayElement<A> = A extends readonly (infer T)[] ? T : never;
@@ -22,12 +21,20 @@ const ItemPick = ({ p }: { p: ArrayElement<UserPicks["picks"]> }) => (
           }}
           width="min-content"
         >
-          <Image
+          {/* <Image
             src={p.match.home.crest}
             alt="home_flag"
             className="crest_img"
             width={20}
             height={20}
+          /> */}
+          <img
+            src={p.match.home.crest}
+            alt="home_flag"
+            className="crest_img"
+            width={20}
+            height={20}
+            style={{ objectFit: "contain" }}
           />
           {p.match.home.name}
         </Box>
@@ -60,12 +67,20 @@ const ItemPick = ({ p }: { p: ArrayElement<UserPicks["picks"]> }) => (
           width="min-content"
         >
           {p.match.away.name}
-          <Image
+          {/* <Image
             src={p.match.away.crest}
             alt="away_flag"
             className="crest_img"
             width={20}
             height={20}
+          /> */}
+          <img
+            src={p.match.away.crest}
+            alt="away_flag"
+            className="crest_img"
+            width={20}
+            height={20}
+            style={{ objectFit: "contain" }}
           />
         </Box>
       </Box>

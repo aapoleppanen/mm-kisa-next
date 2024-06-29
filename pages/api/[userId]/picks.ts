@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import prisma from "../../../lib/prisma";
 import { NextApiRequest, NextApiResponse } from "next";
+import { add } from "date-fns";
 
 export default async function handle(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -33,6 +34,13 @@ export default async function handle(req: NextApiRequest, res: NextApiResponse) 
               startTime: "asc",
             },
           },
+          where: {
+            match: {
+              startTime: {
+                lte: add(new Date(), { hours: 1 }),
+              },
+            }
+          }
         },
       },
     });

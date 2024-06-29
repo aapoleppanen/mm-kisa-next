@@ -1,8 +1,8 @@
 import { auth } from "@/auth";
+import { cloudStorageLoader } from "@/utils/imageUtils";
 import { Box, Button } from "@mui/material";
 import { User } from "@prisma/client";
 import { GetServerSideProps } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import prisma from "../../lib/prisma";
 
@@ -43,14 +43,23 @@ const Profile = ({ user }: Props) => {
         <Button variant="contained">Edit profile</Button>
       </Link>
       <Box width="250px" height="auto" my={1}>
-        {image && <Image
-          src={image}
-          width="250"
-          height="250"
-          alt="profile_image"
-          layout="responsive"
-          objectFit="contain"
-        />}
+        {image && (
+          // <Image
+          //   src={image}
+          //   width="250"
+          //   height="250"
+          //   alt="profile_image"
+          //   layout="responsive"
+          //   objectFit="contain"
+          // />
+          <img
+            src={cloudStorageLoader({ src: image })}
+            alt="profile_image"
+            width={250}
+            height={250}
+            style={{ objectFit: "cover" }}
+          />
+        )}
       </Box>
       <Box my={1}>Name: {name}</Box>
       <Box my={1}>Email: {email}</Box>

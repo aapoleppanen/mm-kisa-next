@@ -1,13 +1,12 @@
+import { auth } from "@/auth";
+import Avatar from "@/components/profile/avatar";
 import { Box, Button, TextField } from "@mui/material";
 import { User } from "@prisma/client";
 import { GetServerSideProps } from "next";
-import Image from "next/image";
-import prisma from "../../lib/prisma";
-import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { auth } from "@/auth";
-import Avatar from "@/components/profile/avatar";
+import React, { useState } from "react";
+import prisma from "../../lib/prisma";
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const session = await auth(context);

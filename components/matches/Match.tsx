@@ -10,7 +10,6 @@ import {
 } from "@mui/material";
 import { Match, Result, Team } from "@prisma/client";
 import { format } from "date-fns";
-import Image from "next/image";
 import { useSnackbar } from "notistack";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
@@ -92,7 +91,9 @@ const MatchComponent = ({
       return;
     }
     if (!ZBetAmount.safeParse(betAmount).success || Number(betAmount) > 50) {
-      enqueueSnackbar(`Invalid bet amount (max allowed bet: ${maxBetAmount})`, { variant: "error" });
+      enqueueSnackbar(`Invalid bet amount (max allowed bet: ${maxBetAmount})`, {
+        variant: "error",
+      });
       return;
     }
 
@@ -178,13 +179,19 @@ const MatchComponent = ({
             sx={{ borderColor: "primary.main", borderRadius: "12px" }}
           >
             <StyledBox>
-              <Image
+              {/* <Image
                 src={match.home.crest}
                 alt="home_flag"
                 loading="lazy"
                 className="crest_img"
                 layout="fill"
                 objectFit="contain"
+              /> */}
+              <img
+                src={match.home.crest}
+                alt="home_flag"
+                className="crest_img"
+                style={{ objectFit: "contain" }}
               />
               <Box display="flex">
                 {match.home.name}
@@ -221,13 +228,19 @@ const MatchComponent = ({
             sx={{ borderColor: "primary.main", borderRadius: "12px" }}
           >
             <StyledBox>
-              <Image
+              {/* <Image
                 src={match.away.crest}
                 alt="away_flag"
                 loading="lazy"
                 className="crest_img"
                 layout="fill"
                 objectFit="contain"
+              />*/}
+              <img
+                src={match.away.crest}
+                alt="away_flag"
+                className="crest_img"
+                style={{ objectFit: "contain" }}
               />
               <Box display="flex">
                 {match.away.name}
