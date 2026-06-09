@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cloudStorageLoader } from "@/utils/imageUtils";
 import { useSession } from "@/lib/auth-client";
-import GifPicker from "./gif-picker";
+import GifPickerPopover from "./gif-picker";
 import { cn } from "@/lib/utils";
 
 const EMOJIS = ["⚽", "🔥", "❤️", "😂", "😮", "👍", "🎉", "😢"];
@@ -150,7 +150,6 @@ export default function MatchComments({ matchId }: { matchId: number }) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [text, setText] = useState("");
   const [gifUrl, setGifUrl] = useState<string | null>(null);
-  const [showGifPicker, setShowGifPicker] = useState(false);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
 
@@ -175,7 +174,6 @@ export default function MatchComments({ matchId }: { matchId: number }) {
     setComments((prev) => [...prev, comment]);
     setText("");
     setGifUrl(null);
-    setShowGifPicker(false);
   };
 
   const handleDelete = async (commentId: string) => {
@@ -249,17 +247,6 @@ export default function MatchComments({ matchId }: { matchId: number }) {
 
       {session && (
         <div className="flex flex-col gap-2 border-t border-slate-200/60 pt-3 mt-1">
-          {/* GIF picker panel */}
-          {showGifPicker && (
-            <div className="animate-in fade-in zoom-in-95 duration-200">
-              <GifPicker
-                onSelect={(url) => { setGifUrl(url); setShowGifPicker(false); }}
-                onClose={() => setShowGifPicker(false)}
-              />
-            </div>
-          )}
-
-          {/* GIF preview */}
           {gifUrl && (
             <div className="relative inline-block w-fit rounded-xl overflow-hidden border border-slate-200 shadow-sm ml-1">
               <img
@@ -294,17 +281,7 @@ export default function MatchComments({ matchId }: { matchId: number }) {
               />
             </div>
             <div className="flex flex-col gap-1.5 shrink-0">
-              <button
-                onClick={() => setShowGifPicker((v) => !v)}
-                className={cn(
-                  "h-8 px-3 rounded-xl border text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 shadow-sm",
-                  showGifPicker
-                    ? "bg-primary text-white border-primary"
-                    : "border-slate-200 text-slate-600 hover:border-primary/40 hover:text-primary bg-white"
-                )}
-              >
-                GIF
-              </button>
+              <GifPickerPopover onSelect={setGifUrl} />
               <Button
                 size="sm"
                 onClick={handlePost}

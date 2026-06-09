@@ -5,17 +5,12 @@ import { Match, Result, ScoringMode, Team } from "@prisma/client";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { z } from "zod";
-import useSWR from "swr";
 import { Button } from "@/components/ui/button";
+import type { PoolData } from "@/lib/pools";
 import { Input } from "@/components/ui/input";
 import { decimalOdds, disabledToday } from "@/lib/config";
 import MatchComments from "./match-comments";
 import { cn } from "@/lib/utils";
-
-type PoolData = {
-  pool: number;
-  multipliers: Record<string, number | null>;
-};
 
 type Props = {
   match: Match & { away: Team; home: Team };
@@ -27,6 +22,7 @@ type Props = {
   maxBetAmount: number;
   lockLeadHours: number;
   updateUserCredits: (credits: number) => void;
+  poolData?: PoolData;
 };
 
 function usePotentialWin(
@@ -64,8 +60,6 @@ function scoreToResult(home: number, away: number): Result {
   return Result.DRAW;
 }
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
-
 export default function MatchCard({
   match,
   result,
@@ -76,6 +70,7 @@ export default function MatchCard({
   maxBetAmount,
   lockLeadHours,
   updateUserCredits,
+  poolData,
 }: Props) {
   const [currentPick, setCurrentPick] = useState<Result | "">(result);
   const [betAmount, setBetAmount] = useState<number | "">(initialBet);
@@ -87,12 +82,6 @@ export default function MatchCard({
   const isExactScore = scoringMode === "EXACT_SCORE";
   const isPariMutuel = scoringMode === "PARI_MUTUEL";
   const hasScore = match.homeGoals != null && match.awayGoals != null;
-
-  const { data: poolData } = useSWR<PoolData>(
-    isPariMutuel ? `/api/match/${match.id}/pool` : null,
-    fetcher,
-    { refreshInterval: 15000 }
-  );
 
   const poolMultiplier =
     currentPick && poolData?.multipliers ? poolData.multipliers[currentPick] ?? null : null;

@@ -3,8 +3,12 @@
 import { useState } from "react";
 import { Match, Pick, Result, ScoringMode, Team } from "@prisma/client";
 import { format, isSameDay } from "date-fns";
+import useSWR from "swr";
 import { roundNumber } from "@/utils/numberUtils";
 import MatchCard from "./match-card";
+import type { PoolData } from "@/lib/pools";
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 type MatchWithRelations = Match & {
   away: Team;
@@ -28,6 +32,13 @@ export default function MatchesClient({
   lockLeadHours,
 }: Props) {
   const [credits, setCredits] = useState(initialCredits);
+  const isPariMutuel = scoringMode === "PARI_MUTUEL";
+
+  const { data: poolsData } = useSWR<Record<string, PoolData>>(
+    isPariMutuel ? "/api/pools" : null,
+    fetcher,
+    { refreshInterval: 30000, refreshWhenHidden: false, revalidateOnFocus: false }
+  );
 
   if (!matches.length) {
     return (
@@ -98,6 +109,7 @@ export default function MatchesClient({
                 maxBetAmount={match.maxBet}
                 lockLeadHours={lockLeadHours}
                 updateUserCredits={setCredits}
+                poolData={poolsData?.[match.id]}
               />
             </div>
           );

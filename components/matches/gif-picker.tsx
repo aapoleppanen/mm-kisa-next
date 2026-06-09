@@ -7,53 +7,33 @@ type GifResult = { id: string; preview: string; url: string };
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export default function GifPicker({
-  onSelect,
-  onClose,
-}: {
-  onSelect: (url: string) => void;
-  onClose: () => void;
-}) {
+function GifPickerPanel({ onSelect }: { onSelect: (url: string) => void }) {
   const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("football");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQuery(query || "football"), 400);
+    const timer = setTimeout(() => setDebouncedQuery(query.trim()), 400);
     return () => clearTimeout(timer);
   }, [query]);
 
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [onClose]);
+  const swrKey = debouncedQuery
+    ? `/api/gif-search?q=${encodeURIComponent(debouncedQuery)}`
+    : "/api/gif-search";
 
-  const { data, isLoading } = useSWR<{ results: GifResult[] }>(
-    `/api/gif-search?q=${encodeURIComponent(debouncedQuery)}`,
-    fetcher
-  );
+  const { data, isLoading } = useSWR<{ results: GifResult[] }>(swrKey, fetcher);
 
   return (
-    <div
-      ref={containerRef}
-      className="bg-white border border-border rounded-2xl shadow-xl overflow-hidden"
-      style={{ width: "100%", maxWidth: 380 }}
-    >
+    <div className="bg-white border border-border rounded-2xl shadow-xl overflow-hidden">
       <div className="p-2 border-b border-border">
         <input
           ref={inputRef}
           type="text"
-          placeholder="Search GIFs…"
+          placeholder="Search KLIPY"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full bg-muted rounded-xl px-3 py-2 text-sm outline-none placeholder:text-muted-foreground"
@@ -87,6 +67,55 @@ export default function GifPicker({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+export default function GifPickerPopover({
+  onSelect,
+}: {
+  onSelect: (url: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={`h-8 px-3 rounded-xl border text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 shadow-sm ${
+          open
+            ? "bg-primary text-white border-primary"
+            : "border-slate-200 text-slate-600 hover:border-primary/40 hover:text-primary bg-white"
+        }`}
+      >
+        GIF
+      </button>
+      {open && (
+        <div
+          className="absolute bottom-full right-0 z-50 mb-2 w-[min(380px,calc(100vw-2rem))] animate-in fade-in slide-in-from-bottom-2 duration-200"
+          style={{ maxWidth: 380 }}
+        >
+          <GifPickerPanel
+            onSelect={(url) => {
+              onSelect(url);
+              setOpen(false);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
