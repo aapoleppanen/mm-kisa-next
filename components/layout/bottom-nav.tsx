@@ -20,23 +20,42 @@ export default function BottomNav({ isAdmin }: { isAdmin?: boolean }) {
     : NAV_ITEMS;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex sm:hidden border-t border-border bg-white">
-      {items.map(({ href, label, Icon }) => {
-        const active = pathname === href;
-        return (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              "flex flex-1 flex-col items-center justify-center py-2 gap-0.5 text-xs transition-colors",
-              active ? "text-primary font-semibold" : "text-muted-foreground"
-            )}
-          >
-            <Icon size={20} strokeWidth={active ? 2.5 : 1.5} />
-            <span>{label}</span>
-          </Link>
-        );
-      })}
-    </nav>
+    <div className="fixed bottom-4 left-4 right-4 z-50 sm:hidden">
+      <nav className="flex items-center justify-around py-2 px-1 bg-white/90 backdrop-blur-md border border-border/60 rounded-2xl shadow-xl">
+        {items.map(({ href, label, Icon }) => {
+          const active = pathname === href;
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                "flex flex-col items-center justify-center py-1.5 flex-1 relative rounded-xl transition-all duration-300 active:scale-90",
+                active ? "text-primary" : "text-muted-foreground hover:text-slate-700"
+              )}
+            >
+              {/* Highlight background pill for active state */}
+              {active && (
+                <span className="absolute inset-0 bg-primary/10 rounded-xl -z-10 scale-90 animate-pulse" />
+              )}
+              
+              <Icon 
+                size={20} 
+                strokeWidth={active ? 2.5 : 1.75} 
+                className={cn(
+                  "transition-transform duration-300",
+                  active ? "-translate-y-0.5 scale-110" : ""
+                )}
+              />
+              <span className={cn(
+                "text-[10px] tracking-wide mt-0.5 font-medium transition-all duration-300",
+                active ? "font-bold scale-105" : "opacity-80"
+              )}>
+                {label}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
   );
 }

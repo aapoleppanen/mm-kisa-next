@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { decimalOdds, disabledToday } from "@/lib/config";
 import MatchComments from "./match-comments";
+import { cn } from "@/lib/utils";
 
 type PoolData = {
   pool: number;
@@ -188,18 +189,38 @@ export default function MatchCard({
           }
         }}
         disabled={disabled || isExactScore}
-        className={`flex-1 flex flex-col items-center gap-1 py-3 px-1 rounded-2xl border-2 transition-all text-sm font-semibold ${
+        className={cn(
+          "flex-1 flex flex-col items-center gap-1.5 py-4 px-1 rounded-2xl border-2 transition-all duration-300 relative select-none overflow-hidden",
           selected
-            ? "bg-primary border-primary text-white shadow-md"
-            : "bg-white border-border text-foreground hover:border-primary/50 hover:bg-primary/5"
-        } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-      >
-        {crest && (
-          <img src={crest} alt="" className="h-8 w-auto object-contain" />
+            ? "bg-primary border-primary text-white shadow-md scale-[1.01]"
+            : "bg-white border-slate-200 text-slate-800 hover:border-primary/50 hover:bg-emerald-50/50",
+          disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer active:scale-95"
         )}
-        <span className="text-xs font-bold leading-tight text-center">{label}</span>
+      >
+        {/* Selected Accent glow */}
+        {selected && (
+          <span className="absolute top-0 right-0 w-2 h-2 rounded-full bg-amber-400 m-2" />
+        )}
+        
+        {crest ? (
+          <div className="h-10 w-10 rounded-full border border-slate-100 flex items-center justify-center p-0.5 bg-slate-50 shadow-sm overflow-hidden shrink-0">
+            <img src={crest} alt="" className="h-full w-full object-contain" />
+          </div>
+        ) : (
+          <div className="h-10 w-10 rounded-full border border-slate-100 flex items-center justify-center bg-slate-50 text-slate-400 shadow-sm shrink-0">
+            🤝
+          </div>
+        )}
+        
+        <span className="text-xs font-bold leading-tight text-center truncate max-w-full px-1">{label}</span>
+        
         {!isExactScore && (
-          <span className={`text-xs font-medium ${selected ? "text-white/80" : "text-muted-foreground"}`}>
+          <span className={cn(
+            "text-[10px] font-bold px-2 py-0.5 rounded-full",
+            selected 
+              ? "bg-amber-400 text-slate-900" 
+              : "text-primary bg-emerald-50 font-semibold"
+          )}>
             {displayOdds(pickResult)}
           </span>
         )}
@@ -208,159 +229,183 @@ export default function MatchCard({
   };
 
   return (
-    <div className="w-full rounded-2xl bg-white border border-border shadow-sm overflow-hidden">
+    <div className="w-full rounded-3xl bg-white border-l-4 border-l-primary border-y border-r border-border/80 shadow-md overflow-hidden hover-lift">
       {/* Header row */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/40">
-        <span className="text-primary font-bold text-lg">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/40 bg-slate-50">
+        <span className="bg-primary/10 text-primary text-xs font-black px-2.5 py-0.5 rounded-full tracking-wide">
           {format(new Date(match.startTime), "HH:mm")}
         </span>
+        
         {hasScore && (
-          <span className="text-base font-bold text-foreground tracking-widest">
-            {match.homeGoals} – {match.awayGoals}
-          </span>
+          <div className="flex items-center gap-1.5 bg-slate-800 text-white rounded-xl px-3 py-0.5 shadow-inner">
+            <span className="text-[9px] font-bold tracking-widest text-slate-300 uppercase leading-none mt-0.5 mr-0.5">FT</span>
+            <span className="text-xs font-mono font-black tracking-widest">
+              {match.homeGoals} – {match.awayGoals}
+            </span>
+          </div>
         )}
-        <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+        
+        <span className="text-[10px] text-muted-foreground font-extrabold uppercase tracking-wider bg-slate-200/50 px-2 py-0.5 rounded-md">
           {match.stage}
         </span>
       </div>
 
       {/* Pick buttons */}
-      <div className="flex gap-2 p-3">
+      <div className="flex gap-2.5 p-3">
         <PickButton pickResult={Result.HOME_TEAM} label={match.home.name} crest={match.home.crest} />
         <PickButton pickResult={Result.DRAW} label="Draw" />
         <PickButton pickResult={Result.AWAY_TEAM} label={match.away.name} crest={match.away.crest} />
       </div>
 
       {/* Bet / score row */}
-      <div className="px-3 pb-3">
+      <div className="px-3 pb-4">
         {isExactScore ? (
-          <div className="flex items-center justify-center gap-5">
+          <div className="flex items-center justify-center gap-6 py-1 bg-slate-50/70 border border-slate-100 rounded-2xl p-2.5">
             {/* Home score */}
             <div className="flex flex-col items-center gap-1">
-              <span className="text-xs text-muted-foreground">{match.home.name}</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase">{match.home.name}</span>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
+                <button
+                  type="button"
                   disabled={disabled || predHome <= 0}
                   onClick={() => { setPredHome((h) => Math.max(0, h - 1)); debouncedSave(); }}
-                  className="w-8 h-8 p-0"
+                  className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-600 hover:border-primary hover:bg-emerald-50 flex items-center justify-center font-bold text-sm shadow-sm active:scale-90 transition-all disabled:opacity-40"
                 >
                   −
-                </Button>
-                <span className="font-bold text-xl w-5 text-center">{predHome}</span>
-                <Button
-                  variant="outline"
-                  size="sm"
+                </button>
+                <span className="font-extrabold font-mono text-xl w-6 text-center text-slate-800">{predHome}</span>
+                <button
+                  type="button"
                   disabled={disabled}
                   onClick={() => { setPredHome((h) => h + 1); debouncedSave(); }}
-                  className="w-8 h-8 p-0"
+                  className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-600 hover:border-primary hover:bg-emerald-50 flex items-center justify-center font-bold text-sm shadow-sm active:scale-90 transition-all"
                 >
                   +
-                </Button>
+                </button>
               </div>
             </div>
-            <span className="text-muted-foreground text-xl font-light">:</span>
+            
+            <span className="text-slate-300 text-2xl font-light leading-none mt-4">:</span>
+            
             {/* Away score */}
             <div className="flex flex-col items-center gap-1">
-              <span className="text-xs text-muted-foreground">{match.away.name}</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase">{match.away.name}</span>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
+                <button
+                  type="button"
                   disabled={disabled || predAway <= 0}
                   onClick={() => { setPredAway((a) => Math.max(0, a - 1)); debouncedSave(); }}
-                  className="w-8 h-8 p-0"
+                  className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-600 hover:border-primary hover:bg-emerald-50 flex items-center justify-center font-bold text-sm shadow-sm active:scale-90 transition-all disabled:opacity-40"
                 >
                   −
-                </Button>
-                <span className="font-bold text-xl w-5 text-center">{predAway}</span>
-                <Button
-                  variant="outline"
-                  size="sm"
+                </button>
+                <span className="font-extrabold font-mono text-xl w-6 text-center text-slate-800">{predAway}</span>
+                <button
+                  type="button"
                   disabled={disabled}
                   onClick={() => { setPredAway((a) => a + 1); debouncedSave(); }}
-                  className="w-8 h-8 p-0"
+                  className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-600 hover:border-primary hover:bg-emerald-50 flex items-center justify-center font-bold text-sm shadow-sm active:scale-90 transition-all"
                 >
                   +
-                </Button>
+                </button>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={disabled}
-              onClick={async () => {
-                setPredHome(0);
-                setPredAway(0);
-                setCurrentPick("");
-                const response = await fetch("/api/pick", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ matchId: match.id, clear: true }),
-                });
-                if (response.ok) {
-                  const data = await response.json();
-                  updateUserCredits(data.remainingCredits);
-                  toast.success("Prediction cleared");
-                }
-              }}
-            >
-              Clear
-            </Button>
+            
+            <div className="flex flex-col gap-1.5 ml-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={disabled}
+                onClick={async () => {
+                  setPredHome(0);
+                  setPredAway(0);
+                  setCurrentPick("");
+                  const response = await fetch("/api/pick", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ matchId: match.id, clear: true }),
+                  });
+                  if (response.ok) {
+                    const data = await response.json();
+                    updateUserCredits(data.remainingCredits);
+                    toast.success("Prediction cleared");
+                  }
+                }}
+                className="h-8 text-[11px] font-semibold text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl"
+              >
+                Clear
+              </Button>
+            </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
-            <Input
-              type="number"
-              value={betAmount}
-              min={0}
-              max={maxBetAmount}
-              step="0.01"
-              placeholder={`Bet (max ${maxBetAmount})`}
-              disabled={disabled}
-              className="w-36 h-9 text-sm"
-              onChange={(e) => setBetAmount(e.target.value ? Number(e.target.value) : "")}
-              onBlur={() => { setBetAmount(betAmount || 0); debouncedSave(); }}
-            />
+          <div className="flex items-center gap-2 py-1 bg-slate-50 border border-slate-100 rounded-2xl p-2.5">
+            <div className="relative flex-1 max-w-[130px]">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">$</span>
+              <Input
+                type="number"
+                value={betAmount}
+                min={0}
+                max={maxBetAmount}
+                step="0.01"
+                placeholder={`Bet (max ${maxBetAmount})`}
+                disabled={disabled}
+                className="w-full pl-6 h-8 text-xs font-bold border-slate-200 rounded-xl focus-visible:ring-primary/20 focus-visible:border-primary"
+                onChange={(e) => setBetAmount(e.target.value ? Number(e.target.value) : "")}
+                onBlur={() => { setBetAmount(betAmount || 0); debouncedSave(); }}
+              />
+            </div>
+            
             {potentialWin != null && currentPick && currentPick !== Result.NO_RESULT ? (
-              <span className="text-sm text-muted-foreground flex-1 whitespace-nowrap">
-                → <strong className="text-foreground">{potentialWin.toFixed(1)}</strong> pts
+              <span className="text-[11px] text-slate-500 flex-1 whitespace-nowrap px-1">
+                Win: <strong className="text-primary font-bold text-xs">+{potentialWin.toFixed(1)}</strong> pts
               </span>
             ) : (
-              <span className="flex-1" />
+              <span className="flex-1 text-[11px] text-slate-400 italic px-1">Enter stake</span>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={disabled}
-              onClick={() => { setCurrentPick(""); setBetAmount(0); debouncedSave(); }}
-            >
-              Clear
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={disabled}
-              onClick={makeApiCall}
-            >
-              Save
-            </Button>
+            
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={disabled}
+                onClick={() => { setCurrentPick(""); setBetAmount(0); debouncedSave(); }}
+                className="h-8 text-[11px] font-semibold text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl px-2"
+              >
+                Clear
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={disabled}
+                onClick={makeApiCall}
+                className="h-8 text-[11px] font-bold text-primary border-primary/40 hover:bg-primary/10 rounded-xl px-3"
+              >
+                Save
+              </Button>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Comments toggle */}
-      <div className="border-t border-border">
+      {/* Comments toggle - Animated header */}
+      <div className="border-t border-border/40">
         <button
           onClick={() => setShowComments(!showComments)}
-          className="w-full flex items-center gap-1.5 px-4 py-2.5 text-xs text-muted-foreground hover:text-primary hover:bg-muted/40 transition-colors"
+          className="w-full flex items-center justify-between px-4 py-3 text-xs text-slate-500 hover:text-primary hover:bg-emerald-50/40 transition-colors duration-200"
         >
-          <span>💬</span>
-          <span>{showComments ? "Hide comments" : "Comments"}</span>
+          <div className="flex items-center gap-1.5 font-semibold">
+            <span>💬</span>
+            <span>{showComments ? "Hide comments" : "Comment on this match"}</span>
+          </div>
+          <span className={cn(
+            "text-[10px] text-slate-400 transition-transform duration-300 font-bold",
+            showComments ? "rotate-180" : ""
+          )}>
+            ▼
+          </span>
         </button>
         {showComments && (
-          <div className="p-3 pt-0">
+          <div className="p-3 pt-0 animate-in fade-in slide-in-from-top-1 duration-200">
             <MatchComments matchId={match.id} />
           </div>
         )}

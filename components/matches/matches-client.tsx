@@ -16,7 +16,7 @@ type MatchWithRelations = Match & {
 type Props = {
   matches: MatchWithRelations[];
   initialCredits: number;
-  backgroundUrl: string;
+  backgroundUrl: string; // Deprecated, using CSS soccer pitch instead
   scoringMode: ScoringMode;
   lockLeadHours: number;
 };
@@ -24,41 +24,48 @@ type Props = {
 export default function MatchesClient({
   matches,
   initialCredits,
-  backgroundUrl,
   scoringMode,
   lockLeadHours,
 }: Props) {
   const [credits, setCredits] = useState(initialCredits);
 
   if (!matches.length) {
-    return <p className="text-center p-8 text-muted-foreground">No matches yet.</p>;
+    return (
+      <div className="soccer-pitch-bg min-h-screen flex items-center justify-center p-8">
+        <div className="bg-white border border-border/80 rounded-3xl p-8 shadow-xl max-w-sm text-center">
+          <span className="text-4xl">⚽</span>
+          <p className="mt-4 text-slate-700 font-bold">No matches scheduled yet.</p>
+          <p className="text-xs text-muted-foreground mt-1">Check back later once the fixtures are seeded!</p>
+        </div>
+      </div>
+    );
   }
 
   let lastDate = new Date(matches[0].startTime);
 
   return (
-    <div className="relative min-h-screen">
-      <img
-        src={backgroundUrl}
-        alt=""
-        className="fixed inset-0 w-full h-full object-cover -z-10"
-      />
-
-      {/* Credits badge */}
-      <div className="fixed top-3 right-3 sm:top-4 sm:right-4 z-50 bg-white border-2 border-border rounded-2xl px-4 py-2 shadow-lg font-bold text-sm flex items-center gap-1.5">
-        <span className="text-muted-foreground text-xs font-medium">Credits</span>
-        <span className="text-foreground">{roundNumber(credits)}</span>
+    <div className="soccer-pitch-bg min-h-screen pt-4 sm:pt-6 pb-24">
+      {/* Credits badge - Premium scoreboard badge */}
+      <div className="fixed top-3 right-3 sm:top-20 sm:right-6 z-40 bg-white/95 backdrop-blur-md border border-amber-400 rounded-2xl px-3.5 py-1.5 shadow-lg flex items-center gap-2 hover-lift">
+        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-500 text-white font-black text-xs">
+          $
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[10px] text-muted-foreground font-semibold uppercase leading-none">Credits</span>
+          <span className="text-sm font-black text-slate-800 leading-tight">{roundNumber(credits)}</span>
+        </div>
       </div>
 
       {/* Lock warning */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-border px-4 py-2 text-center">
-        <p className="text-xs text-muted-foreground font-medium">
-          Picks must be placed {lockLeadHours}h before kick-off
+      <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-border/60 px-4 py-2.5 text-center shadow-sm">
+        <p className="text-xs text-primary font-bold flex items-center justify-center gap-1.5">
+          <span>🕒</span>
+          <span>Predictions lock {lockLeadHours} hours before kickoff</span>
         </p>
       </div>
 
       {/* Match list */}
-      <div className="flex flex-col items-center px-3 pt-4 pb-8 gap-3 max-w-xl mx-auto">
+      <div className="flex flex-col items-center px-4 pt-6 pb-12 gap-5 max-w-xl mx-auto">
         {matches.map((match) => {
           const pick = match.Pick?.[0];
           const pickResult = pick?.pickedResult ?? Result.NO_RESULT;
@@ -69,14 +76,16 @@ export default function MatchesClient({
           if (showDateStamp) lastDate = startDate;
 
           return (
-            <div key={match.id} className="w-full flex flex-col items-center gap-2">
+            <div key={match.id} className="w-full flex flex-col items-center gap-3">
               {showDateStamp && (
-                <div className="w-full flex items-center gap-3 py-1">
-                  <div className="flex-1 h-px bg-white/50" />
-                  <span className="text-white text-xs font-bold uppercase tracking-widest drop-shadow whitespace-nowrap">
-                    {format(startDate, "EEEE d.M.")}
-                  </span>
-                  <div className="flex-1 h-px bg-white/50" />
+                <div className="w-full flex items-center gap-3 py-2 mt-4">
+                  <div className="flex-1 h-[2px] bg-gradient-to-r from-transparent to-primary/20" />
+                  <div className="bg-primary/10 border border-primary/20 rounded-full px-4 py-1 flex items-center gap-1.5 shadow-sm">
+                    <span className="text-xs font-bold text-primary uppercase tracking-wider">
+                      📅 {format(startDate, "EEEE d.M.yyyy")}
+                    </span>
+                  </div>
+                  <div className="flex-1 h-[2px] bg-gradient-to-l from-transparent to-primary/20" />
                 </div>
               )}
               <MatchCard
