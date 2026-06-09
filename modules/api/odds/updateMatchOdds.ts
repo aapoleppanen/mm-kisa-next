@@ -1,19 +1,22 @@
 import request from "graphql-request";
 import { veikkausGraphQlEndpoint } from "../../../lib/config";
 import prisma from "../../../lib/prisma";
-import { euro2024Variables, events } from "./queries";
+import { events } from "./queries";
 import { EventsResponse } from "./types";
-import { VeikkausFDEuroTeamMap } from "../../../utils/adapterUtils";
+import { getActiveTournament, veikkausVariables } from "@/lib/tournament";
+import { getTeamNameMap } from "@/lib/team-map";
+import { emptySeedResult, type SeedResult } from "@/lib/seed-result";
 import { add } from "date-fns";
 
-const VeikkausFDTeamMap = VeikkausFDEuroTeamMap;
-
-export const updateMatchOdds = async () => {
+export const updateMatchOdds = async (): Promise<SeedResult> => {
+  const result = emptySeedResult();
   try {
+    const tournament = await getActiveTournament();
+    const teamMap = await getTeamNameMap();
     const response = await request<EventsResponse>(
       veikkausGraphQlEndpoint,
       events,
-      euro2024Variables
+      veikkausVariables(tournament)
     );
 
     const fixtures = response.sports[0].tournaments[0].events.filter(
@@ -24,21 +27,38 @@ export const updateMatchOdds = async () => {
       for (const draw of event.ebetDraws) {
         if (draw.row.description != "1X2") continue;
 
-        const homeTeamName = VeikkausFDTeamMap[draw.row.competitors[0].name];
-        const awayTeamName = VeikkausFDTeamMap[draw.row.competitors[2].name];
+        const homeVeikkaus = draw.row.competitors[0].name;
+        const awayVeikkaus = draw.row.competitors[2].name;
+        const homeTeamName = teamMap[homeVeikkaus];
+        const awayTeamName = teamMap[awayVeikkaus];
         const homeTeamOdds = draw.row.competitors[0].odds;
         const awayTeamOdds = draw.row.competitors[2].odds;
         const drawOdds = draw.row.competitors[1].odds;
 
-        if (!homeTeamName || !awayTeamName || !homeTeamOdds || !awayTeamOdds || !drawOdds) {
+        if (!homeTeamName) {
+          if (!result.unmapped.includes(homeVeikkaus)) result.unmapped.push(homeVeikkaus);
+          continue;
+        }
+        if (!awayTeamName) {
+          if (!result.unmapped.includes(awayVeikkaus)) result.unmapped.push(awayVeikkaus);
+          continue;
+        }
+        if (!homeTeamOdds || !awayTeamOdds || !drawOdds) {
+          result.skipped++;
           continue;
         }
 
         const awayTeam = await prisma.team.findUnique({ where: { name: awayTeamName } });
         const homeTeam = await prisma.team.findUnique({ where: { name: homeTeamName } });
 
-        if (!awayTeam) throw new Error(`Away team not found ${awayTeamName}`);
-        if (!homeTeam) throw new Error(`Home team not found ${homeTeamName}`);
+        if (!awayTeam) {
+          result.unmapped.push(awayTeamName);
+          continue;
+        }
+        if (!homeTeam) {
+          result.unmapped.push(homeTeamName);
+          continue;
+        }
 
         const match = await prisma.match.findFirst({
           where: {
@@ -53,13 +73,16 @@ export const updateMatchOdds = async () => {
             where: { id: match.id },
             data: { awayWinOdds: awayTeamOdds, homeWinOdds: homeTeamOdds, drawOdds },
           });
+          result.updated++;
+        } else {
+          result.skipped++;
         }
       }
     }
 
-    return true;
+    return result;
   } catch (e) {
-    console.error(e);
-    return false;
+    result.errors.push(e instanceof Error ? e.message : "updateMatchOdds failed");
+    return result;
   }
 };

@@ -1,28 +1,34 @@
 import prisma from "../../../lib/prisma";
+import { getActiveTournament } from "@/lib/tournament";
+import { emptySeedResult, type SeedResult } from "@/lib/seed-result";
 
-export const insertTeams = async () => {
+export const insertTeams = async (): Promise<SeedResult> => {
+  const result = emptySeedResult();
   try {
-    const path = "https://api.football-data.org/v4/competitions/EC/teams";
+    const tournament = await getActiveTournament();
+    const path = `https://api.football-data.org/v4/competitions/${tournament.fdCompetition}/teams`;
     const response = await fetch(path, {
       headers: { "X-Auth-Token": `${process.env.FD_API_TOKEN}` },
     });
     const json = await response.json();
 
-    const filtered = json.teams.map((team: any) => {
-      return {
-        name: team.name,
-        crest: team.crest,
-      };
-    });
-
-    const many = await prisma.team.createMany({
-      data: filtered,
-    });
-
-    console.log(`Succesfully inserted ${many} teams`);
-    return true;
+    for (const team of json.teams ?? []) {
+      try {
+        const existing = await prisma.team.findUnique({ where: { name: team.name } });
+        await prisma.team.upsert({
+          where: { name: team.name },
+          update: { crest: team.crest },
+          create: { name: team.name, crest: team.crest },
+        });
+        if (existing) result.updated++;
+        else result.inserted++;
+      } catch (e) {
+        result.errors.push(`${team.name}: ${e instanceof Error ? e.message : "unknown"}`);
+      }
+    }
+    return result;
   } catch (e) {
-    console.error(e);
-    return false;
+    result.errors.push(e instanceof Error ? e.message : "insertTeams failed");
+    return result;
   }
 };

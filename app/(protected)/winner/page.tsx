@@ -7,11 +7,12 @@ export default async function WinnerPage() {
     prisma.team.findMany({ orderBy: { winningOdds: "asc" } }),
     getConfig(),
   ]);
+  const locked = await isPrePicksLocked(cfg.prePicksLockAt);
 
   return (
     <WinnerClient
       teams={JSON.parse(JSON.stringify(teams))}
-      locked={isPrePicksLocked(cfg.prePicksLockAt)}
+      locked={locked}
     />
   );
 }

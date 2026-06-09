@@ -7,7 +7,6 @@ export const veikkausGraphQlEndpoint =
   "https://v3.middle.prod.gcp.veikkaus.fi/midas/graphql";
 
 export const startDate = new Date("2022-11-20T15:00:00Z");
-export const euro2024startDate = new Date("2024-06-14T19:00:00Z");
 
 const DEFAULT_CONFIG = {
   id: 1,
@@ -26,6 +25,7 @@ const DEFAULT_CONFIG = {
   topScorerBonusFactor: 10,
   actualWinnerTeamId: null,
   actualTopScorerId: null,
+  lastCronRunAt: null,
   updatedAt: new Date(),
 };
 
@@ -44,15 +44,14 @@ export function disabledToday(date: Date, lockLeadHours = 1): boolean {
   return diff < lockLeadHours;
 }
 
-export function isPrePicksLocked(prePicksLockAt: Date | null | undefined): boolean {
-  if (!prePicksLockAt) {
-    return isBefore(euro2024startDate, new Date());
+export async function isPrePicksLocked(prePicksLockAt: Date | null | undefined): Promise<boolean> {
+  if (prePicksLockAt) {
+    return isBefore(prePicksLockAt, new Date());
   }
-  return isBefore(prePicksLockAt, new Date());
+  const { getActiveTournament } = await import("@/lib/tournament");
+  const tournament = await getActiveTournament();
+  return isBefore(tournament.startDate, new Date());
 }
-
-/** @deprecated use isPrePicksLocked with config */
-export const disablePrePicks = () => isBefore(euro2024startDate, new Date());
 
 const STAGE_MAX_BET: Record<Stage, number | null> = {
   GROUP: null,

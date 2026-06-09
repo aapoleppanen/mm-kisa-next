@@ -195,6 +195,7 @@ awardedPoints = exact   ? cfg.exactScorePoints     # 3
 - `POST /api/admin/match/[id]/result` — manually set `result`/`homeGoals`/`awayGoals`, set `resultOverridden = true` (cron then skips it).
 - `POST /api/admin/credits/reset` — per-stage credit reset (see §6).
 - `POST /api/admin/run-cron` — manually fire odds/results/settlement jobs.
+- **Data/seeding** (see §6.5): `POST /api/admin/seed/teams`, `POST /api/admin/seed/matches`, `POST /api/admin/seed/odds` (`?kind=match|team|player`); `POST/PUT/DELETE /api/admin/teams/[id]`, `/api/admin/players/[id]`, `/api/admin/matches/[id]`; `PUT /api/admin/team-map` (Veikkaus↔football-data name map); `PUT /api/admin/tournament` (active-tournament config); `POST /api/admin/actuals` (set actual winner/top-scorer for §5 bonus).
 
 ### 4.2 Admin UI controls (config-as-easy-knobs — your "other admin options")
 | Control | Field | Why |
@@ -213,6 +214,14 @@ awardedPoints = exact   ? cfg.exactScorePoints     # 3
 | **Trigger cron** | button → `/api/admin/run-cron` | Manual odds/results refresh |
 | **Rotate cron secret** | `cronSecret` | Security (see §6.1) |
 | **Manage users** | admin-plugin `listUsers`/`setRole`/`banUser`/`impersonateUser` | Free via the plugin — promote admins, ban cheaters, impersonate to debug |
+| **Seed teams** | button → `/api/admin/seed/teams` | Import the tournament's teams from football-data |
+| **Seed matches** | button → `/api/admin/seed/matches` | Import the fixture list (needs teams first) |
+| **Refresh odds** | buttons → `/api/admin/seed/odds?kind=…` | Pull match / team-winner / top-scorer odds from Veikkaus |
+| **Edit team / player / match** | per-row CRUD forms | Fix name mismatches, missing crests, wrong kickoff/stage by hand |
+| **Team-name map** | `/api/admin/team-map` editor | Map Veikkaus names ↔ football-data names so odds sync stops silently dropping teams |
+| **Tournament setup** | `/api/admin/tournament` | Switch competition (Euro→World Cup), Veikkaus event names, season start — no redeploy (§6.5) |
+| **Set actual winner / top-scorer** | `/api/admin/actuals` | Resolves the §5 odds-weighted bonus |
+| **Data health panel** | read-only dashboard | Last cron run, # matches missing odds/result, # unmapped teams, # users with no picks |
 
 ---
 
@@ -241,7 +250,8 @@ Anyone can hit `/api/cron` and trigger settlement/odds jobs. Add a `CRON_SECRET`
 - **Escalating max bet** by stage (50 → 100 → 200) for a real late-tournament comeback path.
 
 ### 6.3 Code-quality fixes found during exploration
-- `updateResults.ts` uses `json.matches.forEach(async …)` — async callbacks aren't awaited, the `success` flag races, and errors are swallowed. Rewrite as `for…of` with awaited bodies. Same pattern in `updateMatchOdds.ts`.
+- `updateResults.ts` uses `json.matches.forEach(async …)` — async callbacks aren't awaited, the `success` flag races, and errors are swallowed. Rewrite as `for…of` with awaited bodies. **`updateTeamOdds.ts` and `updatePlayerOdds.ts` still have this exact bug** (`updateMatchOdds.ts` was already fixed) — apply the same `for…of` rewrite.
+- `insertTeams.ts` uses `createMany` with no `skipDuplicates` — re-running it throws on the `Team.name` unique constraint. Switch to per-team `upsert` (and update crest) so seeding is idempotent and re-runnable from the admin panel.
 - `/api/pick` casts `result as any` — validate against the `Result` enum with Zod.
 - `/api/pick` create-path returns an optimistic `remainingCredits` instead of re-reading the view (minor drift risk under concurrent bets).
 - Unit scaling (`×100` / `/100`) is implicit and duplicated — centralize in the config/settlement layer (§1.1).
@@ -251,6 +261,37 @@ Anyone can hit `/api/cron` and trigger settlement/odds jobs. Add a `CRON_SECRET`
 - Daily leaderboard snapshot table for "biggest movers" / history graph.
 - Unit tests for each settler (pure functions over fixtures) — the scoring math is the part most worth testing.
 - `maintenanceMode` banner wired to `Config`.
+
+### 6.5 Admin data management & tournament setup
+
+**The single biggest reusability problem:** the whole data pipeline is hardcoded to Euro 2024. To run the next tournament today you'd have to edit code — `competition = "EC"`, `euro2024Variables`/`euro2024startDate`, the Veikkaus event names (`"Euro 2024 - Mestari"`, `"Euro 2024 - Paras maalintekijä"`), and the `VeikkausFDEuroTeamMap` translation table. Move all of it behind admin config so a new cup is a form, not a deploy.
+
+#### Active-tournament config
+Add a `Tournament` model (or a `tournament` block on `Config`) holding everything currently hardcoded:
+```prisma
+model Tournament {
+  id              Int      @id @default(autoincrement())
+  name            String                    // "World Cup 2026"
+  fdCompetition   String                    // football-data code, e.g. "EC" / "WC"
+  startDate       DateTime
+  veikkausWinnerEvent    String             // "Euro 2024 - Mestari"
+  veikkausScorerEvent    String             // "Euro 2024 - Paras maalintekijä"
+  isActive        Boolean  @default(false)   // one active at a time
+}
+```
+`updateResults` / `insertTeams` read `fdCompetition`; the odds jobs read the Veikkaus event names. `lib/config.ts`'s `euro2024*` constants are deleted. This also makes the GraphQL `events` query parameters config-driven.
+
+#### Team-name mapping as data
+`VeikkausFDEuroTeamMap` (Veikkaus name → football-data name) is a hardcoded object in `utils/adapterUtils.ts`. When a name doesn't match, the odds job silently drops that team. Move it to a `TeamNameAlias` table (`{ veikkausName, teamId }`) editable in the admin panel, and have the odds jobs **log/surface unmapped names** instead of dropping them silently (feeds the §4.2 data-health panel).
+
+#### Seeding actions (admin buttons, idempotent)
+- **Seed teams** → `insertTeams` (now upsert, §6.3). Then admin can fix crests/names by hand.
+- **Seed matches** → run the fixture import. Currently matches are created lazily as a side effect of `updateResults`; split out an explicit `insertMatches` (look up teams by name, set `startTime` + `stage`) so the fixture list exists before odds/picks open. Surface teams it couldn't resolve.
+- **Refresh odds** → match / team-winner / top-scorer jobs, individually triggerable.
+- Each action returns a summary (`inserted`, `updated`, `skipped`, `unmapped[]`) shown as a toast + in the health panel — no more reading server logs.
+
+#### Manual CRUD fallback
+APIs + simple forms to add/edit/delete a **team** (name, crest), **player** (name, odds), and **match** (home, away, kickoff, stage), plus the match-result override from §4.1. This is the escape hatch for when the upstream APIs are missing data, names mismatch, or a fixture changes — so the tournament never blocks on a code change.
 
 ---
 
@@ -264,7 +305,8 @@ Schema migration (`Config`, `Role`, `Stage`, `Pick.predHome/predAway/awardedPoin
 - **B. Exact-score** — `settleExactScore`, `/api/pick` scoreline handling, score-stepper UI in `match-card.tsx`. (worktree)
 - **C. Admin panel** — enable the better-auth admin plugin (server + client + `cli generate`), `app/(protected)/admin/`, all `/api/admin/*` routes, role guard, config form, user-management UI. (worktree)
 - **D. Security & cron** — `CRON_SECRET` guard on `/api/cron`, `settleAll()` wired into cron, `resultOverridden` respect, rate-limiting. (worktree)
-- **E. Code-quality** — `updateResults`/`updateMatchOdds` async fixes, Zod enum validation, pick create-path fix. (worktree)
+- **E. Code-quality** — `updateTeamOdds`/`updatePlayerOdds`/`updateResults` async fixes, `insertTeams` upsert, Zod enum validation, pick create-path fix. (worktree)
+- **F. Data management & tournament config (§6.5)** — `Tournament` + `TeamNameAlias` models, de-hardcode `lib/config.ts`/`adapterUtils.ts`/odds jobs, `insertMatches` split-out, seeding + CRUD `/api/admin/*` routes, data-health panel. Depends on C's admin shell — land C's role guard + layout first, then F's pages plug in. (worktree)
 
 > A and B both edit `match-card.tsx`; isolate in worktrees and reconcile in Phase 2 (the card branches on `config.scoringMode`, so the two edits are additive).
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { getConfig, isPrePicksLocked } from "@/lib/config";
+import prisma from "@/lib/prisma";
 import { updateMatchOdds } from "@/modules/api/odds/updateMatchOdds";
 import { updatePlayerOdds } from "@/modules/api/odds/updatePlayerOdds";
 import { updateTeamOdds } from "@/modules/api/odds/updateTeamOdds";
@@ -13,13 +14,18 @@ export async function POST() {
   if (error) return error;
 
   const cfg = await getConfig();
+  const prePicksLocked = await isPrePicksLocked(cfg.prePicksLockAt);
 
-  if (!isPrePicksLocked(cfg.prePicksLockAt)) {
+  if (!prePicksLocked) {
     const [team, player, match] = await Promise.all([
       updateTeamOdds(),
       updatePlayerOdds(),
       updateMatchOdds(),
     ]);
+    await prisma.config.update({
+      where: { id: 1 },
+      data: { lastCronRunAt: new Date() },
+    });
     return NextResponse.json({ team, player, match });
   }
 
@@ -28,6 +34,10 @@ export async function POST() {
     updateMatchOdds(),
   ]);
   await settleAll();
+  await prisma.config.update({
+    where: { id: 1 },
+    data: { lastCronRunAt: new Date() },
+  });
   revalidatePath("/leaderboard");
 
   return NextResponse.json({ results, matchOdds, settled: true });

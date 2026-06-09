@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   }
 
   const cfg = await getConfig();
-  if (isPrePicksLocked(cfg.prePicksLockAt)) {
+  if (await isPrePicksLocked(cfg.prePicksLockAt)) {
     return NextResponse.json({ error: "Picks are now locked" }, { status: 403 });
   }
 

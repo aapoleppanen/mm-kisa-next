@@ -7,11 +7,12 @@ export default async function TopScorerPage() {
     prisma.player.findMany({ orderBy: { odds: "asc" } }),
     getConfig(),
   ]);
+  const locked = await isPrePicksLocked(cfg.prePicksLockAt);
 
   return (
     <TopScorerClient
       players={JSON.parse(JSON.stringify(players))}
-      locked={isPrePicksLocked(cfg.prePicksLockAt)}
+      locked={locked}
     />
   );
 }

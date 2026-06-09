@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Config, Match, Player, Result, Stage, Team } from "@prisma/client";
+import type { Config, Match, Player, Result, Stage, Team, Tournament } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -9,6 +9,18 @@ import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 
 type MatchWithTeams = Match & { home: Team; away: Team };
+type TeamAlias = { id: number; veikkausName: string; teamId: number; team: { id: number; name: string } };
+type HealthData = {
+  lastCronRunAt: string | null;
+  matchesMissingOdds: number;
+  matchesMissingResult: number;
+  usersWithNoPicks: number;
+  teamNameAliases: number;
+  teams: number;
+  matches: number;
+  unmappedTeamsRisk: boolean;
+};
+type SeedResult = { inserted: number; updated: number; skipped: number; unmapped: string[]; errors: string[] };
 
 export default function AdminClient({
   teams,
@@ -20,12 +32,22 @@ export default function AdminClient({
   matches: MatchWithTeams[];
 }) {
   const [config, setConfig] = useState<Config | null>(null);
+  const [tournament, setTournament] = useState<Tournament | null>(null);
+  const [aliases, setAliases] = useState<TeamAlias[]>([]);
+  const [health, setHealth] = useState<HealthData | null>(null);
   const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; role?: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [matchResults, setMatchResults] = useState<Record<number, { result: Result; homeGoals: string; awayGoals: string }>>({});
+  const [newAlias, setNewAlias] = useState({ veikkausName: "", teamId: "" });
+
+  const loadHealth = () =>
+    fetch("/api/admin/health").then((r) => r.json()).then(setHealth).catch(() => {});
 
   useEffect(() => {
     fetch("/api/admin/config").then((r) => r.json()).then(setConfig);
+    fetch("/api/admin/tournament").then((r) => r.json()).then((d) => setTournament(d.active));
+    fetch("/api/admin/team-map").then((r) => r.json()).then(setAliases).catch(() => {});
+    loadHealth();
     authClient.admin.listUsers({ query: { limit: 50 } })
       .then((res) => { if (res.data) setUsers(res.data.users); })
       .catch(() => {});
@@ -53,6 +75,51 @@ export default function AdminClient({
     }
   };
 
+  const saveTournament = async () => {
+    if (!tournament) return;
+    setLoading(true);
+    const res = await fetch("/api/admin/tournament", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...tournament,
+        startDate: new Date(tournament.startDate).toISOString(),
+      }),
+    });
+    setLoading(false);
+    if (res.ok) {
+      setTournament(await res.json());
+      toast.success("Tournament saved");
+    } else {
+      toast.error("Failed to save tournament");
+    }
+  };
+
+  const saveActuals = async () => {
+    if (!config) return;
+    setLoading(true);
+    const res = await fetch("/api/admin/actuals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        actualWinnerTeamId: config.actualWinnerTeamId,
+        actualTopScorerId: config.actualTopScorerId,
+      }),
+    });
+    setLoading(false);
+    if (res.ok) {
+      setConfig(await res.json());
+      toast.success("Actuals set and recomputed");
+    } else {
+      toast.error("Failed to set actuals");
+    }
+  };
+
+  const formatSeedResult = (r: SeedResult) =>
+    `+${r.inserted} / ~${r.updated} / skip ${r.skipped}` +
+    (r.unmapped.length ? ` · unmapped: ${r.unmapped.slice(0, 3).join(", ")}${r.unmapped.length > 3 ? "…" : ""}` : "") +
+    (r.errors.length ? ` · errors: ${r.errors.length}` : "");
+
   const runAction = async (url: string, body?: object, label = "Done") => {
     setLoading(true);
     const res = await fetch(url, {
@@ -61,8 +128,40 @@ export default function AdminClient({
       body: body ? JSON.stringify(body) : undefined,
     });
     setLoading(false);
-    if (res.ok) toast.success(label);
-    else toast.error("Action failed");
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (data && "inserted" in data) {
+        toast.success(`${label}: ${formatSeedResult(data as SeedResult)}`);
+      } else if (data && "team" in data) {
+        const { team, player, match } = data as { team: SeedResult; player: SeedResult; match: SeedResult };
+        toast.success(`Odds: teams ${formatSeedResult(team)}, players ${formatSeedResult(player)}, matches ${formatSeedResult(match)}`);
+      } else {
+        toast.success(label);
+      }
+      loadHealth();
+    } else {
+      toast.error("Action failed");
+    }
+  };
+
+  const addAlias = async () => {
+    if (!newAlias.veikkausName || !newAlias.teamId) return;
+    setLoading(true);
+    const res = await fetch("/api/admin/team-map", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        aliases: [{ veikkausName: newAlias.veikkausName, teamId: Number(newAlias.teamId) }],
+      }),
+    });
+    setLoading(false);
+    if (res.ok) {
+      setAliases(await res.json());
+      setNewAlias({ veikkausName: "", teamId: "" });
+      toast.success("Alias added");
+    } else {
+      toast.error("Failed to add alias");
+    }
   };
 
   const setUserRole = async (userId: string, role: "user" | "admin") => {
@@ -72,11 +171,118 @@ export default function AdminClient({
     if (updated.data) setUsers(updated.data.users);
   };
 
-  if (!config) return <p className="p-8 text-center">Loading admin…</p>;
+  if (!config || !tournament) return <p className="p-8 text-center">Loading admin…</p>;
 
   return (
     <div className="p-4 max-w-3xl mx-auto space-y-6 pb-24">
       <h1 className="text-2xl font-bold">Admin Panel</h1>
+
+      {health && (
+        <section className="space-y-2 border rounded-lg p-3 bg-muted/30 text-sm">
+          <h2 className="font-semibold">Data health</h2>
+          <div className="grid gap-1 sm:grid-cols-2">
+            <span>Last cron: {health.lastCronRunAt ? new Date(health.lastCronRunAt).toLocaleString() : "never"}</span>
+            <span>Matches missing odds: {health.matchesMissingOdds}</span>
+            <span>Matches missing result: {health.matchesMissingResult}</span>
+            <span>Users with no picks: {health.usersWithNoPicks}</span>
+            <span>Team aliases: {health.teamNameAliases} / {health.teams} teams</span>
+            {health.unmappedTeamsRisk && (
+              <span className="text-amber-600">Some teams may lack Veikkaus name mappings</span>
+            )}
+          </div>
+        </section>
+      )}
+
+      <section className="space-y-3">
+        <h2 className="font-semibold text-lg">Tournament setup</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="text-sm">
+            Name
+            <Input value={tournament.name} onChange={(e) => setTournament({ ...tournament, name: e.target.value })} />
+          </label>
+          <label className="text-sm">
+            FD competition code
+            <Input value={tournament.fdCompetition} onChange={(e) => setTournament({ ...tournament, fdCompetition: e.target.value })} />
+          </label>
+          <label className="text-sm">
+            Veikkaus ctids
+            <Input value={tournament.veikkausCtids} onChange={(e) => setTournament({ ...tournament, veikkausCtids: e.target.value })} />
+          </label>
+          <label className="text-sm">
+            Start date
+            <Input
+              type="datetime-local"
+              value={new Date(tournament.startDate).toISOString().slice(0, 16)}
+              onChange={(e) => setTournament({ ...tournament, startDate: new Date(e.target.value) })}
+            />
+          </label>
+          <label className="text-sm">
+            Veikkaus winner event
+            <Input value={tournament.veikkausWinnerEvent} onChange={(e) => setTournament({ ...tournament, veikkausWinnerEvent: e.target.value })} />
+          </label>
+          <label className="text-sm">
+            Veikkaus scorer event
+            <Input value={tournament.veikkausScorerEvent} onChange={(e) => setTournament({ ...tournament, veikkausScorerEvent: e.target.value })} />
+          </label>
+        </div>
+        <Button onClick={saveTournament} disabled={loading}>Save tournament</Button>
+      </section>
+
+      <Separator />
+
+      <section className="space-y-3">
+        <h2 className="font-semibold text-lg">Data seeding</h2>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" disabled={loading} onClick={() => runAction("/api/admin/seed/teams", undefined, "Teams seeded")}>
+            Seed teams
+          </Button>
+          <Button variant="outline" size="sm" disabled={loading} onClick={() => runAction("/api/admin/seed/matches", undefined, "Matches seeded")}>
+            Seed matches
+          </Button>
+          <Button variant="outline" size="sm" disabled={loading} onClick={() => runAction("/api/admin/seed/odds?kind=match", undefined, "Match odds")}>
+            Refresh match odds
+          </Button>
+          <Button variant="outline" size="sm" disabled={loading} onClick={() => runAction("/api/admin/seed/odds?kind=team", undefined, "Team odds")}>
+            Refresh team odds
+          </Button>
+          <Button variant="outline" size="sm" disabled={loading} onClick={() => runAction("/api/admin/seed/odds?kind=player", undefined, "Player odds")}>
+            Refresh scorer odds
+          </Button>
+        </div>
+      </section>
+
+      <Separator />
+
+      <section className="space-y-3">
+        <h2 className="font-semibold text-lg">Team name map (Veikkaus → football-data)</h2>
+        <div className="flex flex-wrap gap-2">
+          <Input
+            className="flex-1 min-w-[120px]"
+            placeholder="Veikkaus name"
+            value={newAlias.veikkausName}
+            onChange={(e) => setNewAlias({ ...newAlias, veikkausName: e.target.value })}
+          />
+          <select
+            className="border rounded-md px-2 py-1.5 text-sm"
+            value={newAlias.teamId}
+            onChange={(e) => setNewAlias({ ...newAlias, teamId: e.target.value })}
+          >
+            <option value="">Team…</option>
+            {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+          <Button size="sm" variant="outline" onClick={addAlias} disabled={loading}>Add</Button>
+        </div>
+        <div className="max-h-40 overflow-y-auto text-sm space-y-1">
+          {aliases.map((a) => (
+            <div key={a.id} className="flex justify-between border rounded px-2 py-1">
+              <span>{a.veikkausName}</span>
+              <span className="text-muted-foreground">→ {a.team.name}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <Separator />
 
       <section className="space-y-3">
         <h2 className="font-semibold text-lg">Scoring Config</h2>
@@ -175,6 +381,7 @@ export default function AdminClient({
         </div>
         <div className="flex flex-wrap gap-2">
           <Button onClick={saveConfig} disabled={loading}>Save config</Button>
+          <Button variant="outline" onClick={saveActuals} disabled={loading}>Set actuals & recompute</Button>
           <Button variant="outline" onClick={() => runAction("/api/admin/recompute", undefined, "Recomputed")} disabled={loading}>
             Recompute now
           </Button>

@@ -1,4 +1,5 @@
 import { getConfig, isPrePicksLocked } from "@/lib/config";
+import prisma from "@/lib/prisma";
 import { updateMatchOdds } from "@/modules/api/odds/updateMatchOdds";
 import { updatePlayerOdds } from "@/modules/api/odds/updatePlayerOdds";
 import { updateTeamOdds } from "@/modules/api/odds/updateTeamOdds";
@@ -24,13 +25,18 @@ export async function GET(request: Request) {
   }
 
   const cfg = await getConfig();
+  const prePicksLocked = await isPrePicksLocked(cfg.prePicksLockAt);
 
-  if (!isPrePicksLocked(cfg.prePicksLockAt)) {
+  if (!prePicksLocked) {
     const [team, player, match] = await Promise.all([
       updateTeamOdds(),
       updatePlayerOdds(),
       updateMatchOdds(),
     ]);
+    await prisma.config.update({
+      where: { id: 1 },
+      data: { lastCronRunAt: new Date() },
+    });
     return Response.json({ team, player, match });
   }
 
@@ -39,6 +45,10 @@ export async function GET(request: Request) {
     updateMatchOdds(),
   ]);
   await settleAll();
+  await prisma.config.update({
+    where: { id: 1 },
+    data: { lastCronRunAt: new Date() },
+  });
   revalidatePath("/leaderboard");
 
   return Response.json({ results, matchOdds, settled: true });

@@ -1,42 +1,39 @@
 import request from "graphql-request";
 import { veikkausGraphQlEndpoint } from "../../../lib/config";
 import prisma from "../../../lib/prisma";
-import { euro2024Variables, events } from "./queries";
+import { events } from "./queries";
 import { EventsResponse } from "./types";
+import { getActiveTournament, veikkausVariables } from "@/lib/tournament";
+import { emptySeedResult, type SeedResult } from "@/lib/seed-result";
 
-export const updatePlayerOdds = async () => {
+export const updatePlayerOdds = async (): Promise<SeedResult> => {
+  const result = emptySeedResult();
   try {
+    const tournament = await getActiveTournament();
     const response = await request<EventsResponse>(
       veikkausGraphQlEndpoint,
       events,
-      euro2024Variables
+      veikkausVariables(tournament)
     );
 
-    response.sports[0].tournaments[0].events.forEach(async (event) => {
-      if (event.name == "Euro 2024 - Paras maalintekijä") {
-        event.ebetDraws[0].row.competitors.forEach(async (player) => {
-          const res = await prisma.player.upsert({
-            where: {
-              name: player.name,
-            },
-            update: {
-              odds: player.odds,
-            },
-            create: {
-              name: player.name,
-              odds: player.odds,
-            },
-          });
+    for (const event of response.sports[0].tournaments[0].events) {
+      if (event.name !== tournament.veikkausScorerEvent) continue;
 
-          // console.log(res);
+      for (const player of event.ebetDraws[0].row.competitors) {
+        const existing = await prisma.player.findUnique({ where: { name: player.name } });
+        await prisma.player.upsert({
+          where: { name: player.name },
+          update: { odds: player.odds },
+          create: { name: player.name, odds: player.odds },
         });
+        if (existing) result.updated++;
+        else result.inserted++;
       }
-    });
+    }
 
-    console.log("successfully updated player winning odds");
-    return true;
+    return result;
   } catch (e) {
-    console.error(e);
-    return false;
+    result.errors.push(e instanceof Error ? e.message : "updatePlayerOdds failed");
+    return result;
   }
 };

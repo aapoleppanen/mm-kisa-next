@@ -1,44 +1,50 @@
 import request from "graphql-request";
 import { veikkausGraphQlEndpoint } from "../../../lib/config";
 import prisma from "../../../lib/prisma";
-import { euro2024Variables, events } from "./queries";
+import { events } from "./queries";
 import { EventsResponse } from "./types";
-import { VeikkausFDEuroTeamMap } from "../../../utils/adapterUtils";
+import { getActiveTournament, veikkausVariables } from "@/lib/tournament";
+import { getTeamNameMap } from "@/lib/team-map";
+import { emptySeedResult, type SeedResult } from "@/lib/seed-result";
 
-export const updateTeamOdds = async () => {
+export const updateTeamOdds = async (): Promise<SeedResult> => {
+  const result = emptySeedResult();
   try {
+    const tournament = await getActiveTournament();
+    const teamMap = await getTeamNameMap();
     const response = await request<EventsResponse>(
       veikkausGraphQlEndpoint,
       events,
-      euro2024Variables
+      veikkausVariables(tournament)
     );
 
-    response.sports[0].tournaments[0].events.forEach(async (event) => {
-      if (event.name == "Euro 2024 - Mestari") {
-        event.ebetDraws[0].row.competitors.forEach(async (comp) => {
-          console.log(comp, VeikkausFDEuroTeamMap[comp.name])
+    for (const event of response.sports[0].tournaments[0].events) {
+      if (event.name !== tournament.veikkausWinnerEvent) continue;
 
-          const name = VeikkausFDEuroTeamMap[comp.name];
+      for (const comp of event.ebetDraws[0].row.competitors) {
+        const fdName = teamMap[comp.name];
+        if (!fdName) {
+          if (!result.unmapped.includes(comp.name)) result.unmapped.push(comp.name);
+          continue;
+        }
 
-          if (!name) return
+        const existing = await prisma.team.findUnique({ where: { name: fdName } });
+        if (!existing) {
+          result.unmapped.push(fdName);
+          continue;
+        }
 
-          const res = await prisma.team.update({
-            where: {
-              name,
-            },
-            data: {
-              winningOdds: comp.odds,
-            },
-          });
-          // console.log(res);
+        await prisma.team.update({
+          where: { name: fdName },
+          data: { winningOdds: comp.odds },
         });
+        result.updated++;
       }
-    });
+    }
 
-    console.log("successfully updated team winning odds");
-    return true;
+    return result;
   } catch (e) {
-    console.error(e);
-    return false;
+    result.errors.push(e instanceof Error ? e.message : "updateTeamOdds failed");
+    return result;
   }
 };

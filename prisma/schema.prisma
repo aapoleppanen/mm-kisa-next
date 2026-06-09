@@ -41,17 +41,37 @@ model Config {
   topScorerBonusFactor Float      @default(10) @db.Real
   actualWinnerTeamId  Int?
   actualTopScorerId   Int?
+  lastCronRunAt       DateTime?
   updatedAt           DateTime    @updatedAt
 }
 
+model Tournament {
+  id                  Int      @id @default(autoincrement())
+  name                String
+  fdCompetition       String
+  veikkausCtids       String
+  startDate           DateTime
+  veikkausWinnerEvent String
+  veikkausScorerEvent String
+  isActive            Boolean  @default(false)
+}
+
+model TeamNameAlias {
+  id           Int    @id @default(autoincrement())
+  veikkausName String @unique
+  teamId       Int
+  team         Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+}
+
 model Team {
-  id          Int     @id @default(autoincrement())
-  name        String  @unique
-  homeMatches Match[] @relation("homeMatchs")
-  awayMatches Match[] @relation("awayMatchs")
+  id          Int             @id @default(autoincrement())
+  name        String          @unique
+  homeMatches Match[]         @relation("homeMatchs")
+  awayMatches Match[]         @relation("awayMatchs")
   crest       String
-  winningOdds Int     @default(0)
+  winningOdds Int             @default(0)
   User        User[]
+  aliases     TeamNameAlias[]
 }
 
 model Match {
