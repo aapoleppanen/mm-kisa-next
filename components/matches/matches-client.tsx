@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Match, Pick, Result, Team } from "@prisma/client";
+import { Match, Pick, Result, ScoringMode, Team } from "@prisma/client";
 import { isSameDay } from "date-fns";
 import { roundNumber } from "@/utils/numberUtils";
 import MatchCard from "./match-card";
@@ -10,15 +10,24 @@ type MatchWithRelations = Match & {
   away: Team;
   home: Team;
   Pick?: Pick[];
+  maxBet: number;
 };
 
 type Props = {
   matches: MatchWithRelations[];
   initialCredits: number;
   backgroundUrl: string;
+  scoringMode: ScoringMode;
+  lockLeadHours: number;
 };
 
-export default function MatchesClient({ matches, initialCredits, backgroundUrl }: Props) {
+export default function MatchesClient({
+  matches,
+  initialCredits,
+  backgroundUrl,
+  scoringMode,
+  lockLeadHours,
+}: Props) {
   const [credits, setCredits] = useState(initialCredits);
 
   if (!matches.length) return <p className="text-center p-8">No matches yet.</p>;
@@ -35,7 +44,7 @@ export default function MatchesClient({ matches, initialCredits, backgroundUrl }
 
       <div className="flex flex-col items-center px-2 pt-4 pb-6 gap-3 max-w-2xl mx-auto">
         <p className="text-white font-bold text-sm sm:text-base text-center drop-shadow-md">
-          PICKS MUST BE MADE 1 HOUR BEFORE MATCH STARTS
+          PICKS MUST BE MADE {lockLeadHours} HOUR{lockLeadHours !== 1 ? "S" : ""} BEFORE MATCH STARTS
         </p>
 
         <div className="fixed top-2 right-4 sm:top-auto sm:bottom-4 bg-white rounded-xl border-2 border-black px-4 py-2 z-50 font-bold shadow-lg text-sm">
@@ -64,6 +73,11 @@ export default function MatchesClient({ matches, initialCredits, backgroundUrl }
                 match={match}
                 result={result}
                 betAmount={betAmount}
+                predHome={pick?.predHome}
+                predAway={pick?.predAway}
+                scoringMode={scoringMode}
+                maxBetAmount={match.maxBet}
+                lockLeadHours={lockLeadHours}
                 updateUserCredits={setCredits}
               />
             </div>

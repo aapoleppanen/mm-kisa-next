@@ -2,7 +2,7 @@ import { betterFetch } from "@better-fetch/fetch";
 import type { Session } from "better-auth/types";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED_PATHS = ["/matches", "/leaderboard", "/winner", "/top-scorer", "/profile"];
+const PROTECTED_PATHS = ["/matches", "/leaderboard", "/winner", "/top-scorer", "/profile", "/admin"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

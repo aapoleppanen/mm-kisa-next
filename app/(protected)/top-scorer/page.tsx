@@ -1,10 +1,17 @@
 import prisma from "@/lib/prisma";
+import { getConfig, isPrePicksLocked } from "@/lib/config";
 import TopScorerClient from "@/components/top-scorer/top-scorer-client";
 
 export default async function TopScorerPage() {
-  const players = await prisma.player.findMany({
-    orderBy: { odds: "asc" },
-  });
+  const [players, cfg] = await Promise.all([
+    prisma.player.findMany({ orderBy: { odds: "asc" } }),
+    getConfig(),
+  ]);
 
-  return <TopScorerClient players={JSON.parse(JSON.stringify(players))} />;
+  return (
+    <TopScorerClient
+      players={JSON.parse(JSON.stringify(players))}
+      locked={isPrePicksLocked(cfg.prePicksLockAt)}
+    />
+  );
 }

@@ -97,6 +97,10 @@ NEXT_PUBLIC_R2_PUBLIC_URL=https://pub-xxx.r2.dev
 
 # Football data API
 FD_API_TOKEN=your_football_data_token
+
+# Admin & cron (betting overhaul)
+ADMIN_USER_IDS=your_better_auth_user_id   # comma-separated; bootstraps admin role
+CRON_SECRET=generate_with_openssl_rand_hex_32  # required for /api/cron (Vercel Cron sends as Bearer token)
 ```
 
 ---

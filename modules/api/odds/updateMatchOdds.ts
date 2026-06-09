@@ -3,12 +3,10 @@ import { veikkausGraphQlEndpoint } from "../../../lib/config";
 import prisma from "../../../lib/prisma";
 import { euro2024Variables, events } from "./queries";
 import { EventsResponse } from "./types";
-import {
-  VeikkausFDEuroTeamMap,
-} from "../../../utils/adapterUtils";
+import { VeikkausFDEuroTeamMap } from "../../../utils/adapterUtils";
 import { add } from "date-fns";
 
-const VeikkausFDTeamMap = VeikkausFDEuroTeamMap; // VeikkausFDWorldCupTeamMap
+const VeikkausFDTeamMap = VeikkausFDEuroTeamMap;
 
 export const updateMatchOdds = async () => {
   try {
@@ -18,68 +16,46 @@ export const updateMatchOdds = async () => {
       euro2024Variables
     );
 
-    response.sports[0].tournaments[0].events
-      .filter((event) => {
-        return event.type == "Fixture"
-      })
-      .forEach(async (event) => {
-        event.ebetDraws.forEach(async (draw) => {
-          if (draw.row.description == "1X2") {
-            const homeTeamName =
-              VeikkausFDTeamMap[draw.row.competitors[0].name];
-            const awayTeamName =
-              VeikkausFDTeamMap[draw.row.competitors[2].name];
-            const homeTeamOdds = draw.row.competitors[0].odds;
-            const awayTeamOdds = draw.row.competitors[2].odds;
-            const drawOdds = draw.row.competitors[1].odds;
+    const fixtures = response.sports[0].tournaments[0].events.filter(
+      (event) => event.type == "Fixture"
+    );
 
-            if (
-              homeTeamName &&
-              awayTeamName &&
-              homeTeamOdds &&
-              awayTeamOdds &&
-              drawOdds
-            ) {
-              const awayTeam = await prisma.team.findUnique({
-                where: { name: awayTeamName },
-              });
-              const homeTeam = await prisma.team.findUnique({
-                where: { name: homeTeamName },
-              });
+    for (const event of fixtures) {
+      for (const draw of event.ebetDraws) {
+        if (draw.row.description != "1X2") continue;
 
-              if (!awayTeam)
-                throw new Error(`Away team not found ${awayTeamName}`);
-              if (!homeTeam)
-                throw new Error(`Away team not found ${homeTeamName}`);
+        const homeTeamName = VeikkausFDTeamMap[draw.row.competitors[0].name];
+        const awayTeamName = VeikkausFDTeamMap[draw.row.competitors[2].name];
+        const homeTeamOdds = draw.row.competitors[0].odds;
+        const awayTeamOdds = draw.row.competitors[2].odds;
+        const drawOdds = draw.row.competitors[1].odds;
 
-              const match = await prisma.match.findFirst({
-                where: {
-                  homeId: homeTeam.id,
-                  awayId: awayTeam.id,
-                  startTime: {
-                    gte: add(new Date(), { hours: 1 }),
-                  }
-                },
-              });
+        if (!homeTeamName || !awayTeamName || !homeTeamOdds || !awayTeamOdds || !drawOdds) {
+          continue;
+        }
 
-              if (match) {
-                const res = await prisma.match.update({
-                  where: {
-                    id: match.id,
-                  },
-                  data: {
-                    awayWinOdds: awayTeamOdds,
-                    homeWinOdds: homeTeamOdds,
-                    drawOdds,
-                  },
-                });
+        const awayTeam = await prisma.team.findUnique({ where: { name: awayTeamName } });
+        const homeTeam = await prisma.team.findUnique({ where: { name: homeTeamName } });
 
-                // console.log(res);
-              }
-            }
-          }
+        if (!awayTeam) throw new Error(`Away team not found ${awayTeamName}`);
+        if (!homeTeam) throw new Error(`Home team not found ${homeTeamName}`);
+
+        const match = await prisma.match.findFirst({
+          where: {
+            homeId: homeTeam.id,
+            awayId: awayTeam.id,
+            startTime: { gte: add(new Date(), { hours: 1 }) },
+          },
         });
-      });
+
+        if (match) {
+          await prisma.match.update({
+            where: { id: match.id },
+            data: { awayWinOdds: awayTeamOdds, homeWinOdds: homeTeamOdds, drawOdds },
+          });
+        }
+      }
+    }
 
     return true;
   } catch (e) {

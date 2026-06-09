@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, Trophy, Swords, Star, List } from "lucide-react";
+import { User, Trophy, Swords, Star, List, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -13,12 +13,15 @@ const NAV_ITEMS = [
   { href: "/leaderboard", label: "Board", Icon: List },
 ];
 
-export default function BottomNav() {
+export default function BottomNav({ isAdmin }: { isAdmin?: boolean }) {
   const pathname = usePathname();
+  const items = isAdmin
+    ? [...NAV_ITEMS, { href: "/admin", label: "Admin", Icon: Shield }]
+    : NAV_ITEMS;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 flex sm:hidden border-t border-border bg-white">
-      {NAV_ITEMS.map(({ href, label, Icon }) => {
+      {items.map(({ href, label, Icon }) => {
         const active = pathname === href;
         return (
           <Link

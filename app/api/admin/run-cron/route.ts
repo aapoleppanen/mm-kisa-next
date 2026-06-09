@@ -1,27 +1,16 @@
+import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
+import { requireAdmin } from "@/lib/admin";
 import { getConfig, isPrePicksLocked } from "@/lib/config";
 import { updateMatchOdds } from "@/modules/api/odds/updateMatchOdds";
 import { updatePlayerOdds } from "@/modules/api/odds/updatePlayerOdds";
 import { updateTeamOdds } from "@/modules/api/odds/updateTeamOdds";
 import { updateResults } from "@/modules/api/results/updateResults";
 import { settleAll } from "@/modules/api/scoring/settle";
-import { revalidatePath } from "next/cache";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
-async function verifyCronAuth(request: Request): Promise<boolean> {
-  const cfg = await getConfig();
-  const secret = cfg.cronSecret ?? process.env.CRON_SECRET;
-  if (!secret) return false;
-
-  const auth = request.headers.get("authorization");
-  return auth === `Bearer ${secret}`;
-}
-
-export async function GET(request: Request) {
-  if (!(await verifyCronAuth(request))) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export async function POST() {
+  const { error } = await requireAdmin();
+  if (error) return error;
 
   const cfg = await getConfig();
 
@@ -31,7 +20,7 @@ export async function GET(request: Request) {
       updatePlayerOdds(),
       updateMatchOdds(),
     ]);
-    return Response.json({ team, player, match });
+    return NextResponse.json({ team, player, match });
   }
 
   const [results, matchOdds] = await Promise.all([
@@ -41,5 +30,5 @@ export async function GET(request: Request) {
   await settleAll();
   revalidatePath("/leaderboard");
 
-  return Response.json({ results, matchOdds, settled: true });
+  return NextResponse.json({ results, matchOdds, settled: true });
 }

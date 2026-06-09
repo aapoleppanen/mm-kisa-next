@@ -50,7 +50,7 @@ export default function LeaderboardClient({ users }: { users: LeaderBoardUser[] 
               {loadingId === user.id ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <span className="font-bold tabular-nums">{roundNumber(user.points / 100)}</span>
+                <span className="font-bold tabular-nums">{roundNumber(user.points)}</span>
               )}
               {selected === user.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </div>

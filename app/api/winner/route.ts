@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import prisma from "@/lib/prisma";
-import { disablePrePicks } from "@/lib/config";
+import { getConfig, isPrePicksLocked } from "@/lib/config";
 
 const WinnerSchema = z.object({ teamId: z.number().int() });
 
@@ -13,7 +13,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 403 });
   }
 
-  if (disablePrePicks()) {
+  const cfg = await getConfig();
+  if (isPrePicksLocked(cfg.prePicksLockAt)) {
     return NextResponse.json({ error: "Picks are now locked" }, { status: 403 });
   }
 

@@ -3,12 +3,10 @@
 import { useEffect, useState } from "react";
 import { Team } from "@prisma/client";
 import { Button } from "@/components/ui/button";
-import { disablePrePicks } from "@/lib/config";
 import { toast } from "sonner";
 
-export default function WinnerClient({ teams }: { teams: Team[] }) {
+export default function WinnerClient({ teams, locked }: { teams: Team[]; locked: boolean }) {
   const [picked, setPicked] = useState<number | null>(null);
-  const locked = disablePrePicks();
 
   useEffect(() => {
     fetch("/api/user-winner-scorer")

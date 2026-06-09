@@ -2,15 +2,22 @@ import { auth } from "@/auth";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { Result } from "@prisma/client";
 import prisma from "@/lib/prisma";
-import { disabledToday, maxBetAmount } from "@/lib/config";
+import { disabledToday, getConfig, maxBetForStage } from "@/lib/config";
 import { roundNumber } from "@/utils/numberUtils";
 import { User } from "@prisma/client";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
+
+const ResultEnum = z.enum(["HOME_TEAM", "AWAY_TEAM", "DRAW", "NO_RESULT"]);
 
 const PickSchema = z.object({
   matchId: z.number().int(),
-  result: z.string().optional(),
-  betAmount: z.number().min(0),
+  result: ResultEnum.optional(),
+  betAmount: z.number().min(0).optional(),
+  predHome: z.number().int().min(0).optional(),
+  predAway: z.number().int().min(0).optional(),
+  clear: z.boolean().optional(),
 });
 
 async function getUserCreditsView(userId: string) {
@@ -20,38 +27,98 @@ async function getUserCreditsView(userId: string) {
   return rows[0];
 }
 
+function predToResult(predHome: number, predAway: number): Result {
+  if (predHome > predAway) return Result.HOME_TEAM;
+  if (predHome < predAway) return Result.AWAY_TEAM;
+  return Result.DRAW;
+}
+
 export async function POST(request: NextRequest) {
+  const ip = clientIp(request);
+  const rl = rateLimit(`pick:${ip}`, { limit: 60, windowMs: 60_000 });
+  if (!rl.ok) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user.id) {
     return NextResponse.json({ error: "Please sign in" }, { status: 403 });
   }
 
+  const cfg = await getConfig();
+  if (cfg.maintenanceMode) {
+    return NextResponse.json({ error: "Maintenance mode" }, { status: 503 });
+  }
+
   const body = await request.json();
   const parsed = PickSchema.safeParse({
     ...body,
-    betAmount: roundNumber(body.betAmount),
+    betAmount: body.betAmount != null ? roundNumber(body.betAmount) : undefined,
   });
 
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
-  const { matchId, result, betAmount } = parsed.data;
+  const { matchId, result, betAmount = 0, predHome, predAway, clear } = parsed.data;
   const userId = session.user.id;
+  const isExactScore = cfg.scoringMode === "EXACT_SCORE";
 
-  if (betAmount < 0 || betAmount > maxBetAmount) {
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    select: { startTime: true, stage: true },
+  });
+  if (!match) {
+    return NextResponse.json({ error: "Match not found" }, { status: 404 });
+  }
+
+  const maxBet = maxBetForStage(match.stage, cfg.maxBetAmount);
+
+  if (isExactScore) {
+    if (clear || predHome == null || predAway == null) {
+      try {
+        await prisma.pick.delete({ where: { userId_matchId: { userId, matchId } } });
+      } catch {}
+      const updatedUser = await getUserCreditsView(userId);
+      return NextResponse.json({
+        remainingCredits: updatedUser?.remainingCredits ?? 0,
+        betAmount: 0,
+        notification: "Cleared prediction",
+      });
+    }
+
+    if (disabledToday(match.startTime, cfg.lockLeadHours)) {
+      return NextResponse.json({ error: "Too late" }, { status: 403 });
+    }
+
+    const pickedResult = predToResult(predHome, predAway);
+    await prisma.pick.upsert({
+      where: { userId_matchId: { userId, matchId } },
+      create: { matchId, userId, predHome, predAway, pickedResult, betAmount: 0 },
+      update: { predHome, predAway, pickedResult, betAmount: 0 },
+    });
+
+    const updatedUser = await getUserCreditsView(userId);
+    return NextResponse.json({
+      remainingCredits: updatedUser?.remainingCredits ?? 0,
+      betAmount: 0,
+      predHome,
+      predAway,
+      notification: "Prediction saved",
+    });
+  }
+
+  if (betAmount < 0 || betAmount > maxBet) {
     return NextResponse.json({ error: "Invalid bet amount" }, { status: 403 });
   }
 
-  if (!result || result === "" || betAmount === 0) {
+  if (!result || result === Result.NO_RESULT || betAmount === 0) {
     try {
-      await prisma.pick.delete({
-        where: { userId_matchId: { userId, matchId } },
-      });
+      await prisma.pick.delete({ where: { userId_matchId: { userId, matchId } } });
     } catch {}
     const updatedUser = await getUserCreditsView(userId);
     return NextResponse.json({
-      remainingCredits: updatedUser.remainingCredits,
+      remainingCredits: updatedUser?.remainingCredits ?? 0,
       betAmount: 0,
       notification: "Cleared bet successfully",
     });
@@ -59,7 +126,6 @@ export async function POST(request: NextRequest) {
 
   const pick = await prisma.pick.findFirst({
     where: { matchId, userId },
-    include: { match: { select: { startTime: true } } },
   });
 
   const user = await getUserCreditsView(userId);
@@ -71,26 +137,24 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (pick) {
-    if (disabledToday(pick.match.startTime)) {
-      return NextResponse.json({ error: "Too late" }, { status: 403 });
-    }
-
-    await prisma.pick.update({
-      where: { id: pick.id },
-      data: { pickedResult: result as any, betAmount },
-    });
-
-    const updatedUser = await getUserCreditsView(userId);
-    return NextResponse.json({ remainingCredits: updatedUser.remainingCredits, betAmount });
+  if (disabledToday(match.startTime, cfg.lockLeadHours)) {
+    return NextResponse.json({ error: "Too late" }, { status: 403 });
   }
 
-  await prisma.pick.create({
-    data: { matchId, userId, pickedResult: result as any, betAmount },
-  });
+  if (pick) {
+    await prisma.pick.update({
+      where: { id: pick.id },
+      data: { pickedResult: result, betAmount },
+    });
+  } else {
+    await prisma.pick.create({
+      data: { matchId, userId, pickedResult: result, betAmount },
+    });
+  }
 
+  const updatedUser = await getUserCreditsView(userId);
   return NextResponse.json({
-    remainingCredits: user.remainingCredits - betAmount,
+    remainingCredits: updatedUser?.remainingCredits ?? 0,
     betAmount,
   });
 }

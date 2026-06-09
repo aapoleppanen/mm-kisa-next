@@ -4,7 +4,6 @@ import { Match, Pick, Player, Result, Team, User } from "@prisma/client";
 import { LeaderBoardUser } from "@/app/(protected)/leaderboard/page";
 import { roundNumber } from "@/utils/numberUtils";
 import { Separator } from "@/components/ui/separator";
-import { disabledToday } from "@/lib/config";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +32,7 @@ export default function UserPicksOverview({ picks, user }: { picks: FullUser; us
           <p className="text-sm text-muted-foreground">Credits</p>
         </div>
         <div>
-          <p className="text-2xl font-bold">{roundNumber(user.points / 100)}</p>
+          <p className="text-2xl font-bold">{roundNumber(user.points)}</p>
           <p className="text-sm text-muted-foreground">Points</p>
         </div>
       </div>
@@ -56,7 +55,11 @@ export default function UserPicksOverview({ picks, user }: { picks: FullUser; us
         {picks.picks.map((p) => {
           const won = p.pickedResult === p.match.result;
           const matchDone = !!p.match.result;
-          const potWin = getPotentialWin(p.betAmount, p.pickedResult, p.match);
+          const displayPts = matchDone && p.awardedPoints > 0
+            ? p.awardedPoints
+            : !matchDone && p.betAmount > 0
+            ? getPotentialWin(p.betAmount, p.pickedResult, p.match)
+            : 0;
           return (
             <div key={p.id} className="flex items-center justify-between text-xs gap-2 py-1">
               <span className="text-muted-foreground w-10">
@@ -65,9 +68,11 @@ export default function UserPicksOverview({ picks, user }: { picks: FullUser; us
               <span className="flex-1 truncate">
                 {p.match.home.name} vs {p.match.away.name}
               </span>
-              <span className="text-muted-foreground">{p.pickedResult}</span>
+              <span className="text-muted-foreground">
+                {p.predHome != null ? `${p.predHome}-${p.predAway}` : p.pickedResult}
+              </span>
               <span className={cn("font-medium", won ? "text-green-600" : matchDone ? "text-muted-foreground line-through" : "")}>
-                {won ? `+${potWin.toFixed(1)}` : !matchDone && p.betAmount > 0 ? potWin.toFixed(1) : ""}
+                {displayPts > 0 ? (matchDone && won ? `+${displayPts.toFixed(1)}` : displayPts.toFixed(1)) : ""}
               </span>
             </div>
           );

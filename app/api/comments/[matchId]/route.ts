@@ -3,6 +3,8 @@ import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import prisma from "@/lib/prisma";
+import { getConfig } from "@/lib/config";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 const CommentSchema = z.object({
   content: z.string().min(1).max(500).trim(),
@@ -25,9 +27,20 @@ export async function GET(_request: NextRequest, { params }: Params) {
 }
 
 export async function POST(request: NextRequest, { params }: Params) {
+  const ip = clientIp(request);
+  const rl = rateLimit(`comments:${ip}`, { limit: 20, windowMs: 60_000 });
+  if (!rl.ok) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user.id) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 403 });
+  }
+
+  const cfg = await getConfig();
+  if (cfg.maintenanceMode) {
+    return NextResponse.json({ error: "Maintenance mode" }, { status: 503 });
   }
 
   const { matchId } = await params;

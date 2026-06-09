@@ -9,6 +9,41 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum ScoringMode {
+  FIXED_ODDS
+  COMPRESSED_ODDS
+  PARI_MUTUEL
+  EXACT_SCORE
+}
+
+enum Stage {
+  GROUP
+  R16
+  QF
+  SF
+  FINAL
+}
+
+model Config {
+  id                  Int         @id @default(1)
+  scoringMode         ScoringMode @default(FIXED_ODDS)
+  startingCredits     Float       @default(500) @db.Real
+  maxBetAmount        Float       @default(50) @db.Real
+  lockLeadHours       Int         @default(1)
+  prePicksLockAt      DateTime?
+  rakePercent         Float       @default(0) @db.Real
+  exactScorePoints    Int         @default(3)
+  goalDiffPoints      Int         @default(2)
+  tendencyPoints      Int         @default(1)
+  maintenanceMode     Boolean     @default(false)
+  cronSecret          String?
+  winnerBonusFactor   Float       @default(10) @db.Real
+  topScorerBonusFactor Float      @default(10) @db.Real
+  actualWinnerTeamId  Int?
+  actualTopScorerId   Int?
+  updatedAt           DateTime    @updatedAt
+}
+
 model Team {
   id          Int     @id @default(autoincrement())
   name        String  @unique
@@ -20,20 +55,22 @@ model Team {
 }
 
 model Match {
-  id          Int       @id @default(autoincrement())
-  startTime   DateTime
-  homeId      Int
-  awayId      Int
-  homeGoals   Int?
-  awayGoals   Int?
-  home        Team      @relation(name: "homeMatchs", fields: [homeId], references: [id])
-  away        Team      @relation(name: "awayMatchs", fields: [awayId], references: [id])
-  Pick        Pick[]    @relation("matchPicks")
-  Comment     Comment[]
-  awayWinOdds Int       @default(0)
-  homeWinOdds Int       @default(0)
-  drawOdds    Int       @default(0)
-  result      Result?
+  id               Int       @id @default(autoincrement())
+  startTime        DateTime
+  homeId           Int
+  awayId           Int
+  homeGoals        Int?
+  awayGoals        Int?
+  home             Team      @relation(name: "homeMatchs", fields: [homeId], references: [id])
+  away             Team      @relation(name: "awayMatchs", fields: [awayId], references: [id])
+  Pick             Pick[]    @relation("matchPicks")
+  Comment          Comment[]
+  awayWinOdds      Int       @default(0)
+  homeWinOdds      Int       @default(0)
+  drawOdds         Int       @default(0)
+  result           Result?
+  stage            Stage     @default(GROUP)
+  resultOverridden Boolean   @default(false)
 }
 
 model Player {
@@ -51,13 +88,16 @@ enum Result {
 }
 
 model Pick {
-  id           Int     @id @default(autoincrement())
-  matchId      Int
-  match        Match   @relation(name: "matchPicks", fields: [matchId], references: [id])
-  userId       String
-  user         User    @relation(name: "userPicks", fields: [userId], references: [id])
-  pickedResult Result?
-  betAmount    Float   @default(0) @db.Real
+  id            Int     @id @default(autoincrement())
+  matchId       Int
+  match         Match   @relation(name: "matchPicks", fields: [matchId], references: [id])
+  userId        String
+  user          User    @relation(name: "userPicks", fields: [userId], references: [id])
+  pickedResult  Result?
+  betAmount     Float   @default(0) @db.Real
+  predHome      Int?
+  predAway      Int?
+  awardedPoints Float   @default(0) @db.Real
 
   @@index([userId, matchId])
   @@unique([userId, matchId])
@@ -76,38 +116,43 @@ model Comment {
 
 // better-auth tables
 model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  picks         Pick[]    @relation("userPicks")
-  comments      Comment[]
-  winnerPick    Team?     @relation(fields: [teamId], references: [id])
-  topScorerPick Player?   @relation(fields: [playerId], references: [id])
-  sessions      Session[]
-  accounts      Account[]
-  teamId        Int?
-  playerId      Int?
-  credits       Float     @default(500) @db.Real
-  remainingCredits Float  @default(0) @db.Real
-  points        Float     @default(0) @db.Real
+  id               String    @id @default(cuid())
+  name             String
+  email            String    @unique
+  emailVerified    Boolean   @default(false)
+  image            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  picks            Pick[]    @relation("userPicks")
+  comments         Comment[]
+  winnerPick       Team?     @relation(fields: [teamId], references: [id])
+  topScorerPick    Player?   @relation(fields: [playerId], references: [id])
+  sessions         Session[]
+  accounts         Account[]
+  teamId           Int?
+  playerId         Int?
+  credits          Float     @default(500) @db.Real
+  remainingCredits Float     @default(0) @db.Real
+  points           Float     @default(0) @db.Real
+  role             String?
+  banned           Boolean?
+  banReason        String?
+  banExpires       DateTime?
 
   @@index([id])
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  expiresAt DateTime
-  token     String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  ipAddress String?
-  userAgent String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  expiresAt      DateTime
+  token          String   @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  impersonatedBy String?
 }
 
 model Account {

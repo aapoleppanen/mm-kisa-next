@@ -15,13 +15,14 @@ const NAV_LINKS = [
   { href: "/leaderboard", label: "Leaderboard" },
 ];
 
-export default function Header({ session }: { session: Session }) {
+export default function Header({ session, isAdmin }: { session: Session; isAdmin?: boolean }) {
   const pathname = usePathname();
+  const links = isAdmin ? [...NAV_LINKS, { href: "/admin", label: "Admin" }] : NAV_LINKS;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 hidden sm:flex items-center justify-between px-4 py-3 bg-white border-b border-border shadow-sm">
       <nav className="flex items-center gap-1">
-        {NAV_LINKS.map(({ href, label }) => (
+        {links.map(({ href, label }) => (
           <Link key={href} href={href}>
             <Button
               variant={pathname === href ? "default" : "ghost"}
