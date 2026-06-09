@@ -1,19 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
 
+type KlipyFormat = { url?: string; width?: number; height?: number; size?: number };
+type KlipyFileTier = { gif?: KlipyFormat; webp?: KlipyFormat };
+type KlipyFile = {
+  hd?: KlipyFileTier;
+  md?: KlipyFileTier;
+  sm?: KlipyFileTier;
+  xs?: KlipyFileTier;
+  gif?: string | KlipyFormat;
+  webp?: string | KlipyFormat;
+};
+
 type KlipyItem = {
   id?: number | string;
   slug?: string;
   type?: string;
-  file?: { gif?: string; webp?: string };
-  files?: { gif?: string; webp?: string };
+  file?: KlipyFile;
+  files?: KlipyFile;
 };
+
+function formatUrl(format?: string | KlipyFormat): string {
+  if (!format) return "";
+  return typeof format === "string" ? format : (format.url ?? "");
+}
 
 function mapKlipyItem(item: KlipyItem) {
   const file = item.file ?? item.files;
+  if (!file) {
+    return { id: String(item.id ?? item.slug ?? ""), preview: "", url: "" };
+  }
+
+  const preview =
+    formatUrl(file.sm?.webp) ||
+    formatUrl(file.xs?.webp) ||
+    formatUrl(file.sm?.gif) ||
+    formatUrl(file.webp);
+
+  const url =
+    formatUrl(file.md?.gif) ||
+    formatUrl(file.hd?.gif) ||
+    formatUrl(file.sm?.gif) ||
+    formatUrl(file.gif);
+
   return {
     id: String(item.id ?? item.slug ?? ""),
-    preview: file?.webp ?? file?.gif ?? "",
-    url: file?.gif ?? file?.webp ?? "",
+    preview,
+    url,
   };
 }
 

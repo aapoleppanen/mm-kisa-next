@@ -21,6 +21,9 @@ export default async function MatchesPage() {
         away: true,
         home: true,
         Pick: { where: { userId } },
+        _count: {
+          select: { Comment: true },
+        },
       },
       orderBy: { startTime: "asc" },
     }),
