@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import prisma from "@/lib/prisma";
 
-const ALLOWED_EMOJIS = ["⚽", "🔥", "❤️", "😂", "😮", "👍", "🎉", "😢"];
+const ALLOWED_EMOJIS = ["⚽", "👍", "😂", "🔥", "❤️", "😮", "🎉", "😢"];
 
 const ReactionSchema = z.object({
   emoji: z.string().refine((e) => ALLOWED_EMOJIS.includes(e), "Invalid emoji"),

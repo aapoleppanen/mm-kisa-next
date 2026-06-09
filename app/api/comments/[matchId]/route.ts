@@ -6,10 +6,14 @@ import prisma from "@/lib/prisma";
 import { getConfig } from "@/lib/config";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
-const CommentSchema = z.object({
-  content: z.string().min(1).max(500).trim(),
-  gifUrl: z.string().url().optional().nullable(),
-});
+const CommentSchema = z
+  .object({
+    content: z.string().max(500).trim(),
+    gifUrl: z.string().url().optional().nullable(),
+  })
+  .refine((data) => data.content.length >= 1 || data.gifUrl, {
+    message: "Comment or GIF required",
+  });
 
 type Params = { params: Promise<{ matchId: string }> };
 

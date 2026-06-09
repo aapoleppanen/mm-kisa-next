@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
+import { Loader2, MoreHorizontal, Plus, Send, X } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import { useSession } from "@/lib/auth-client";
 import GifPickerPopover from "./gif-picker";
 import { cn } from "@/lib/utils";
 
-const EMOJIS = ["⚽", "🔥", "❤️", "😂", "😮", "👍", "🎉", "😢"];
+const REACTIONS = ["⚽", "👍", "😂", "🔥"];
 
 type ReactionGroup = { emoji: string; count: number; userReacted: boolean };
 type CommentUser = { id: string; name: string | null; image: string | null };
@@ -22,6 +23,32 @@ type Comment = {
   user: CommentUser;
   reactions: ReactionGroup[];
 };
+
+function applyReactionToggle(comments: Comment[], commentId: string, emoji: string): Comment[] {
+  return comments.map((c) => {
+    if (c.id !== commentId) return c;
+    const existing = c.reactions.find((r) => r.emoji === emoji);
+    if (existing?.userReacted) {
+      return {
+        ...c,
+        reactions: c.reactions
+          .map((r) =>
+            r.emoji === emoji ? { ...r, count: r.count - 1, userReacted: false } : r
+          )
+          .filter((r) => r.count > 0),
+      };
+    }
+    if (existing) {
+      return {
+        ...c,
+        reactions: c.reactions.map((r) =>
+          r.emoji === emoji ? { ...r, count: r.count + 1, userReacted: true } : r
+        ),
+      };
+    }
+    return { ...c, reactions: [...c.reactions, { emoji, count: 1, userReacted: true }] };
+  });
+}
 
 function EmojiPickerPopover({
   commentId,
@@ -45,23 +72,70 @@ function EmojiPickerPopover({
   return (
     <div ref={ref} className="relative">
       <button
+        type="button"
+        aria-label="Add reaction"
+        aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="w-6 h-6 rounded-full border border-slate-200 bg-white text-slate-500 hover:bg-primary/10 hover:text-primary hover:border-primary/20 text-xs flex items-center justify-center transition-all duration-200 leading-none shadow-sm cursor-pointer"
-        title="Add reaction"
+        className={cn(
+          "size-6 rounded-full border flex items-center justify-center transition-colors duration-150",
+          open
+            ? "bg-primary/10 border-primary/30 text-primary"
+            : "border-border/80 bg-white text-muted-foreground hover:text-foreground hover:border-border"
+        )}
       >
-        +
+        <Plus className="size-3" strokeWidth={2} />
       </button>
       {open && (
-        <div className="absolute bottom-7 left-0 z-30 bg-white border border-border/80 rounded-2xl shadow-xl p-2.5 flex gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200">
-          {EMOJIS.map((emoji) => (
+        <div className="absolute bottom-7 left-0 z-30 bg-white border border-border/80 rounded-xl shadow-md p-1.5 flex gap-0.5">
+          {REACTIONS.map((emoji) => (
             <button
               key={emoji}
+              type="button"
               onClick={() => { onReact(commentId, emoji); setOpen(false); }}
-              className="text-lg hover:scale-130 active:scale-95 transition-transform p-1 cursor-pointer"
+              className="size-8 rounded-lg text-base hover:bg-muted transition-colors duration-150"
             >
               {emoji}
             </button>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CommentMenu({ onDelete }: { onDelete: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative ml-auto shrink-0">
+      <button
+        type="button"
+        aria-label="Comment options"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="size-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors duration-150"
+      >
+        <MoreHorizontal className="size-4" strokeWidth={1.75} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-30 min-w-28 bg-white border border-border/80 rounded-lg shadow-md py-1">
+          <button
+            type="button"
+            onClick={() => { onDelete(); setOpen(false); }}
+            className="w-full px-3 py-1.5 text-left text-xs text-destructive hover:bg-destructive/5 transition-colors duration-150"
+          >
+            Delete
+          </button>
         </div>
       )}
     </div>
@@ -79,63 +153,58 @@ function CommentItem({
   onDelete: (id: string) => void;
   currentUserId?: string;
 }) {
+  const hasText = Boolean(comment.content?.trim()) && comment.content !== "📎";
+
   return (
-    <li className="flex gap-3 items-start group bg-white border border-slate-100 rounded-2xl p-3 shadow-sm hover:border-slate-200/80 transition-all duration-200">
-      <Avatar className="h-8 w-8 shrink-0 border border-slate-100 shadow-sm">
+    <li className="flex gap-2.5 items-start py-2.5 border-b border-border/50 last:border-0">
+      <Avatar className="size-7 shrink-0">
         {comment.user.image && (
           <AvatarImage src={cloudStorageLoader({ src: comment.user.image })} />
         )}
-        <AvatarFallback className="text-xs bg-emerald-50 text-primary font-bold">
+        <AvatarFallback className="text-[10px] bg-muted text-muted-foreground font-medium">
           {comment.user.name?.[0] ?? "?"}
         </AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0">
-        <div className="flex items-baseline justify-between">
-          <div className="flex items-baseline gap-2">
-            <span className="text-xs font-bold text-slate-800">{comment.user.name}</span>
-            <span className="text-[10px] text-slate-400">
-              {format(new Date(comment.createdAt), "d.M. HH:mm")}
-            </span>
-          </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-foreground">{comment.user.name}</span>
+          <span className="text-[10px] text-muted-foreground tabular-nums">
+            {format(new Date(comment.createdAt), "d.M. HH:mm")}
+          </span>
           {currentUserId === comment.user.id && (
-            <button
-              onClick={() => onDelete(comment.id)}
-              className="text-[10px] text-slate-400 hover:text-red-500 shrink-0 opacity-0 group-hover:opacity-100 transition-all cursor-pointer font-bold px-1"
-              title="Delete comment"
-            >
-              ✕
-            </button>
+            <CommentMenu onDelete={() => onDelete(comment.id)} />
           )}
         </div>
-        {comment.content && comment.content !== "📎" && (
-          <p className="text-sm text-slate-700 break-words mt-1 leading-relaxed">
+        {hasText && (
+          <p className="text-sm text-foreground/90 break-words mt-0.5 leading-snug text-pretty">
             {comment.content}
           </p>
         )}
         {comment.gifUrl && (
-          <div className="mt-2 rounded-xl overflow-hidden border border-slate-100 max-w-fit shadow-sm bg-slate-50">
+          <div className="mt-1.5 rounded-lg overflow-hidden border border-border/60 max-w-fit bg-muted/30">
             <img
               src={comment.gifUrl}
-              alt="gif"
-              className="max-h-36 max-w-full object-contain"
+              alt=""
+              className="max-h-32 max-w-full object-contain"
               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
           </div>
         )}
-        <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+        <div className="flex flex-wrap items-center gap-1 mt-1.5">
           {comment.reactions.map((r) => (
             <button
               key={r.emoji}
+              type="button"
               onClick={() => onReact(comment.id, r.emoji)}
               className={cn(
-                "flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs border transition-all duration-200 cursor-pointer active:scale-95",
+                "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-colors duration-150",
                 r.userReacted
-                  ? "bg-emerald-50 border-primary/30 text-primary font-bold"
-                  : "bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-100/80"
+                  ? "bg-primary/10 border-primary/25 text-primary"
+                  : "bg-muted/50 border-transparent text-muted-foreground hover:bg-muted"
               )}
             >
               <span>{r.emoji}</span>
-              <span className="text-[10px] font-bold">{r.count}</span>
+              <span className="tabular-nums text-[10px] font-medium">{r.count}</span>
             </button>
           ))}
           <EmojiPickerPopover commentId={comment.id} onReact={onReact} />
@@ -145,7 +214,13 @@ function CommentItem({
   );
 }
 
-export default function MatchComments({ matchId }: { matchId: number }) {
+export default function MatchComments({
+  matchId,
+  onCountChange,
+}: {
+  matchId: number;
+  onCountChange?: (count: number) => void;
+}) {
   const { data: session } = useSession();
   const [comments, setComments] = useState<Comment[]>([]);
   const [text, setText] = useState("");
@@ -160,16 +235,20 @@ export default function MatchComments({ matchId }: { matchId: number }) {
       .finally(() => setLoading(false));
   }, [matchId]);
 
+  useEffect(() => {
+    onCountChange?.(comments.length);
+  }, [comments.length, onCountChange]);
+
   const handlePost = async () => {
     if (!text.trim() && !gifUrl) return;
     setPosting(true);
     const res = await fetch(`/api/comments/${matchId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: text.trim() || "📎", gifUrl }),
+      body: JSON.stringify({ content: text.trim(), gifUrl }),
     });
     setPosting(false);
-    if (!res.ok) { toast.error("Failed to post comment"); return; }
+    if (!res.ok) { toast.error("Couldn't post comment"); return; }
     const { comment } = await res.json();
     setComments((prev) => [...prev, comment]);
     setText("");
@@ -177,118 +256,103 @@ export default function MatchComments({ matchId }: { matchId: number }) {
   };
 
   const handleDelete = async (commentId: string) => {
-    await fetch(`/api/comments/${matchId}`, {
+    const prev = comments;
+    setComments((c) => c.filter((x) => x.id !== commentId));
+    const res = await fetch(`/api/comments/${matchId}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ commentId }),
     });
-    setComments((prev) => prev.filter((c) => c.id !== commentId));
+    if (!res.ok) {
+      setComments(prev);
+      toast.error("Couldn't delete comment");
+    }
   };
 
   const handleReaction = async (commentId: string, emoji: string) => {
     if (!session) { toast.error("Sign in to react"); return; }
+
+    const prev = comments;
+    setComments((c) => applyReactionToggle(c, commentId, emoji));
+
     const res = await fetch(`/api/reactions/${commentId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ emoji }),
     });
-    if (!res.ok) return;
-    const { added } = await res.json();
-    setComments((prev) =>
-      prev.map((c) => {
-        if (c.id !== commentId) return c;
-        const existing = c.reactions.find((r) => r.emoji === emoji);
-        if (existing) {
-          return {
-            ...c,
-            reactions: c.reactions
-              .map((r) =>
-                r.emoji === emoji
-                  ? { ...r, count: added ? r.count + 1 : r.count - 1, userReacted: added }
-                  : r
-              )
-              .filter((r) => r.count > 0),
-          };
-        }
-        if (!added) return c;
-        return { ...c, reactions: [...c.reactions, { emoji, count: 1, userReacted: true }] };
-      })
-    );
+    if (!res.ok) {
+      setComments(prev);
+      toast.error("Couldn't react");
+    }
   };
 
   return (
-    <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-3 flex flex-col gap-3">
-      <div className="flex items-center justify-between px-1">
-        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-          Discussions
-        </p>
-        <span className="text-[10px] bg-slate-200 text-slate-600 font-bold px-1.5 py-0.5 rounded">
-          {comments.length}
-        </span>
+    <div className="w-full bg-white border border-border/60 rounded-xl">
+      <div className="px-3">
+        {loading ? (
+          <p className="text-xs text-muted-foreground py-3">Loading…</p>
+        ) : comments.length === 0 ? (
+          <p className="text-xs text-muted-foreground py-3">No comments yet.</p>
+        ) : (
+          <ul className="max-h-64 overflow-y-auto -mx-3 px-3">
+            {comments.map((c) => (
+              <CommentItem
+                key={c.id}
+                comment={c}
+                onReact={handleReaction}
+                onDelete={handleDelete}
+                currentUserId={session?.user.id}
+              />
+            ))}
+          </ul>
+        )}
       </div>
 
-      {loading ? (
-        <p className="text-xs text-muted-foreground italic px-1">Loading comments...</p>
-      ) : comments.length === 0 ? (
-        <p className="text-xs text-muted-foreground italic px-1">No talk yet. Start the buzz!</p>
-      ) : (
-        <ul className="flex flex-col gap-2.5 max-h-72 overflow-y-auto pr-1">
-          {comments.map((c) => (
-            <CommentItem
-              key={c.id}
-              comment={c}
-              onReact={handleReaction}
-              onDelete={handleDelete}
-              currentUserId={session?.user.id}
-            />
-          ))}
-        </ul>
-      )}
-
       {session && (
-        <div className="flex flex-col gap-2 border-t border-slate-200/60 pt-3 mt-1">
+        <div className="border-t border-border/50 p-3 space-y-2">
           {gifUrl && (
-            <div className="relative inline-block w-fit rounded-xl overflow-hidden border border-slate-200 shadow-sm ml-1">
-              <img
-                src={gifUrl}
-                alt="gif preview"
-                className="max-h-24 object-contain"
-              />
+            <div className="relative inline-block rounded-lg overflow-hidden border border-border/60">
+              <img src={gifUrl} alt="" className="max-h-20 object-contain bg-muted/30" />
               <button
+                type="button"
+                aria-label="Remove GIF"
                 onClick={() => setGifUrl(null)}
-                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-slate-800/80 hover:bg-red-600 text-white text-xs flex items-center justify-center transition-colors cursor-pointer"
+                className="absolute top-1 right-1 size-5 rounded-full bg-foreground/70 hover:bg-destructive text-white flex items-center justify-center transition-colors duration-150"
               >
-                ✕
+                <X className="size-3" strokeWidth={2.5} />
               </button>
             </div>
           )}
 
           <div className="flex gap-2 items-end">
-            <div className="flex-1 relative">
-              <textarea
-                placeholder="Join the discussion... (Ctrl+Enter to post)"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                maxLength={500}
-                rows={2}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                    e.preventDefault();
-                    handlePost();
-                  }
-                }}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/80 resize-none leading-relaxed transition-all duration-200 shadow-inner"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5 shrink-0">
-              <GifPickerPopover onSelect={setGifUrl} />
+            <textarea
+              placeholder="Add a comment…"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              maxLength={500}
+              rows={2}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                  e.preventDefault();
+                  handlePost();
+                }
+              }}
+              className="flex-1 border border-border/60 rounded-lg px-3 py-2 text-sm bg-white placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40 resize-none leading-snug"
+            />
+            <div className="flex items-center gap-1.5 shrink-0 pb-0.5">
+              <GifPickerPopover onSelect={setGifUrl} active={Boolean(gifUrl)} />
               <Button
-                size="sm"
+                size="icon"
+                aria-label="Post comment"
                 onClick={handlePost}
                 disabled={posting || (!text.trim() && !gifUrl)}
-                className="h-8 rounded-xl font-bold bg-primary hover:bg-primary/90 text-white px-3 hover-lift active-press"
+                className="size-8 rounded-lg"
               >
-                {posting ? "..." : "Post"}
+                {posting ? (
+                  <Loader2 className="size-4 animate-spin" strokeWidth={2} />
+                ) : (
+                  <Send className="size-4" strokeWidth={1.75} />
+                )}
               </Button>
             </div>
           </div>

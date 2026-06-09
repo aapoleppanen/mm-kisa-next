@@ -77,6 +77,7 @@ export default function MatchCard({
   const [predHome, setPredHome] = useState(initialPredHome ?? 0);
   const [predAway, setPredAway] = useState(initialPredAway ?? 0);
   const [showComments, setShowComments] = useState(false);
+  const [commentCount, setCommentCount] = useState<number | null>(null);
   const latestRef = useRef({ currentPick, betAmount, predHome, predAway });
   const disabled = disabledToday(new Date(match.startTime), lockLeadHours);
   const isExactScore = scoringMode === "EXACT_SCORE";
@@ -218,7 +219,7 @@ export default function MatchCard({
   };
 
   return (
-    <div className="w-full rounded-3xl bg-white border-l-4 border-l-primary border-y border-r border-border/80 shadow-md overflow-hidden hover-lift">
+    <div className="w-full rounded-3xl bg-white border-l-4 border-l-primary border-y border-r border-border/80 shadow-md overflow-hidden">
       {/* Header row */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/40 bg-slate-50">
         <span className="bg-primary/10 text-primary text-xs font-black px-2.5 py-0.5 rounded-full tracking-wide">
@@ -380,22 +381,25 @@ export default function MatchCard({
       <div className="border-t border-border/40">
         <button
           onClick={() => setShowComments(!showComments)}
-          className="w-full flex items-center justify-between px-4 py-3 text-xs text-slate-500 hover:text-primary hover:bg-emerald-50/40 transition-colors duration-200"
+          className="w-full flex items-center justify-between px-4 py-3 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors duration-150"
         >
-          <div className="flex items-center gap-1.5 font-semibold">
-            <span>💬</span>
-            <span>{showComments ? "Hide comments" : "Comment on this match"}</span>
-          </div>
+          <span className="font-medium">
+            {showComments
+              ? "Hide comments"
+              : commentCount != null && commentCount > 0
+                ? `Comments (${commentCount})`
+                : "Comments"}
+          </span>
           <span className={cn(
-            "text-[10px] text-slate-400 transition-transform duration-300 font-bold",
+            "text-[10px] transition-transform duration-150",
             showComments ? "rotate-180" : ""
           )}>
             ▼
           </span>
         </button>
         {showComments && (
-          <div className="p-3 pt-0 animate-in fade-in slide-in-from-top-1 duration-200">
-            <MatchComments matchId={match.id} />
+          <div className="p-3 pt-0">
+            <MatchComments matchId={match.id} onCountChange={setCommentCount} />
           </div>
         )}
       </div>
