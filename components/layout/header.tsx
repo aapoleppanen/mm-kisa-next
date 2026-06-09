@@ -24,7 +24,7 @@ export default function Header({ session, isAdmin }: { session: Session; isAdmin
       <div className="flex items-center gap-6">
         <Link href="/matches" className="flex items-center gap-2 font-black text-primary tracking-wider uppercase text-base hover:scale-105 transition-transform duration-200">
           <span className="text-xl leading-none">⚽</span>
-          <span>MM-Kisa '26</span>
+          <span>{"MM-Kisa '26"}</span>
         </Link>
         <nav className="flex items-center gap-1.5">
           {links.map(({ href, label }) => {
