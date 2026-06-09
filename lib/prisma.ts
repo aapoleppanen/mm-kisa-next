@@ -1,40 +1,11 @@
-import { PrismaClient } from "@prisma/client/edge";
-import { withAccelerate } from "@prisma/extension-accelerate";
+import { PrismaClient } from "@prisma/client";
 
-let prisma: PrismaClient;
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
 
-const initializePrisma = (withLogging: boolean = false) => {
-  if (!withLogging) {
-    return new PrismaClient().$extends(withAccelerate()) as unknown as PrismaClient;
-  }
+const prisma = globalForPrisma.prisma ?? new PrismaClient();
 
-  return new PrismaClient().$extends(withAccelerate()).$extends({
-    query: {
-      async $allOperations({ operation, model, args, query }) {
-        const start = performance.now();
-        const result = await query(args);
-        const end = performance.now();
-        const time = end - start;
-        console.log(
-          { model, operation, args, time },
-          { showHidden: false, depth: null, colors: true }
-        );
-        return result;
-      },
-    },
-  }) as unknown as PrismaClient;
-};
-
-if (process.env.NODE_ENV === "production") {
-  prisma = initializePrisma();
-} else {
-  let globalWithPrisma = global as typeof globalThis & {
-    prisma: PrismaClient;
-  };
-  if (!globalWithPrisma.prisma) {
-    globalWithPrisma.prisma = initializePrisma();
-  }
-  prisma = globalWithPrisma.prisma;
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
 }
 
 export default prisma;

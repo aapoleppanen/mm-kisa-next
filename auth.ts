@@ -1,47 +1,30 @@
-import { PrismaAdapter } from "@auth/prisma-adapter"
-import NextAuth from "next-auth"
-import GitHub from "next-auth/providers/github"
-import Google from "next-auth/providers/google"
-import prisma from "./lib/prisma"
+import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
+import prisma from "./lib/prisma";
 
-export const { auth, handlers, signIn, signOut } = NextAuth({
-  providers: [GitHub, Google],
-  adapter: PrismaAdapter(prisma),
-})
+export const auth = betterAuth({
+  database: prismaAdapter(prisma, {
+    provider: "postgresql",
+  }),
+  secret: process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET!,
+  emailAndPassword: {
+    enabled: true,
+    minPasswordLength: 8,
+  },
+  socialProviders: {
+    github: {
+      clientId: process.env.GITHUB_CLIENT_ID ?? process.env.AUTH_GITHUB_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET ?? process.env.AUTH_GITHUB_SECRET!,
+    },
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID ?? process.env.AUTH_GOOGLE_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? process.env.AUTH_GOOGLE_SECRET!,
+    },
+  },
+  session: {
+    expiresIn: 60 * 60 * 24 * 30, // 30 days
+    updateAge: 60 * 60 * 24,       // refresh daily
+  },
+});
 
-// import { PrismaAdapter } from "@auth/prisma-adapter";
-// import { NextApiHandler } from "next";
-// import NextAuth from "next-auth";
-// import GitHubProvider from "next-auth/providers/github";
-// import GoogleProvider from "next-auth/providers/google";
-// import prisma from "../../../lib/prisma";
-
-// // TODO: fix authentication
-
-// const authHandler: NextApiHandler = (req, res) => NextAuth(options);
-// export default authHandler;
-
-// export const options = {
-//   site: process.env.NEXTAUTH_URL,
-//   providers: [
-//     GoogleProvider({
-//       clientId: process.env.GOOGLE_CLIENT_ID,
-//       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-//     }),
-//     GitHubProvider({
-//       clientId: process.env.GITHUB_ID,
-//       clientSecret: process.env.GITHUB_SECRET,
-//     }),
-//   ],
-//   adapter: PrismaAdapter(prisma),
-//   secret: process.env.SECRET,
-//   callbacks: {
-//     async session({ session, user }) {
-//       if (session?.user) {
-//         session.user.id = user.id;
-//       }
-
-//       return session;
-//     },
-//   },
-// };
+export type Session = typeof auth.$Infer.Session;

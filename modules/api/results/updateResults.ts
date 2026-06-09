@@ -1,5 +1,5 @@
 import prisma from "../../../lib/prisma";
-import { Match } from "../../../pages/api/results/types";
+import { Match } from "./types";
 
 export const updateResults = async () => {
   try {

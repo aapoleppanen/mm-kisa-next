@@ -1,8 +1,8 @@
 import request from "graphql-request";
 import { veikkausGraphQlEndpoint } from "../../../lib/config";
 import prisma from "../../../lib/prisma";
-import { euro2024Variables, events } from "../../../pages/api/odds/queries";
-import { EventsResponse } from "../../../pages/api/odds/types";
+import { euro2024Variables, events } from "./queries";
+import { EventsResponse } from "./types";
 
 export const updatePlayerOdds = async () => {
   try {
