@@ -2,11 +2,13 @@ import { z } from "zod";
 
 export const TournamentSchema = z.object({
   name: z.string().min(1),
-  fdCompetition: z.string().min(1),
-  veikkausCtids: z.string().min(1),
+  fixtureSource: z.enum(["ESPN", "FOOTBALL_DATA", "VEIKKAUS"]).default("ESPN"),
+  espnLeagueSlug: z.string().nullable().optional(),
+  fdCompetition: z.string().nullable().optional(),
+  veikkausDrilldownTagId: z.number().int().nullable().optional(),
   startDate: z.string().datetime(),
-  veikkausWinnerEvent: z.string().min(1),
-  veikkausScorerEvent: z.string().min(1),
+  veikkausWinnerEvent: z.string().nullable().optional(),
+  veikkausScorerEvent: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
 });
 

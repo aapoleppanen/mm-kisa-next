@@ -3,11 +3,6 @@ import { differenceInHours, isBefore } from "date-fns";
 import type { Config, Stage } from "@prisma/client";
 import prisma from "@/lib/prisma";
 
-export const veikkausGraphQlEndpoint =
-  "https://v3.middle.prod.gcp.veikkaus.fi/midas/graphql";
-
-export const startDate = new Date("2022-11-20T15:00:00Z");
-
 const DEFAULT_CONFIG = {
   id: 1,
   scoringMode: "FIXED_ODDS" as const,

@@ -8,22 +8,49 @@ import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 const CommentSchema = z.object({
   content: z.string().min(1).max(500).trim(),
+  gifUrl: z.string().url().optional().nullable(),
 });
 
 type Params = { params: Promise<{ matchId: string }> };
 
-export async function GET(_request: NextRequest, { params }: Params) {
+function groupReactions(
+  reactions: { emoji: string; userId: string }[],
+  currentUserId: string | undefined
+) {
+  const map = new Map<string, { count: number; userReacted: boolean }>();
+  for (const r of reactions) {
+    const existing = map.get(r.emoji) ?? { count: 0, userReacted: false };
+    map.set(r.emoji, {
+      count: existing.count + 1,
+      userReacted: existing.userReacted || r.userId === currentUserId,
+    });
+  }
+  return Array.from(map.entries()).map(([emoji, data]) => ({ emoji, ...data }));
+}
+
+export async function GET(request: NextRequest, { params }: Params) {
   const { matchId } = await params;
   const id = parseInt(matchId, 10);
   if (isNaN(id)) return NextResponse.json({ error: "Invalid matchId" }, { status: 400 });
 
+  const session = await auth.api.getSession({ headers: await headers() }).catch(() => null);
+  const currentUserId = session?.user.id;
+
   const comments = await prisma.comment.findMany({
     where: { matchId: id },
-    include: { user: { select: { name: true, image: true, id: true } } },
+    include: {
+      user: { select: { name: true, image: true, id: true } },
+      reactions: { select: { emoji: true, userId: true } },
+    },
     orderBy: { createdAt: "asc" },
   });
 
-  return NextResponse.json({ comments });
+  return NextResponse.json({
+    comments: comments.map((c) => ({
+      ...c,
+      reactions: groupReactions(c.reactions, currentUserId),
+    })),
+  });
 }
 
 export async function POST(request: NextRequest, { params }: Params) {
@@ -56,16 +83,23 @@ export async function POST(request: NextRequest, { params }: Params) {
   const comment = await prisma.comment.create({
     data: {
       content: parsed.data.content,
+      gifUrl: parsed.data.gifUrl ?? null,
       matchId: id,
       userId: session.user.id,
     },
-    include: { user: { select: { name: true, image: true, id: true } } },
+    include: {
+      user: { select: { name: true, image: true, id: true } },
+      reactions: { select: { emoji: true, userId: true } },
+    },
   });
 
-  return NextResponse.json({ comment }, { status: 201 });
+  return NextResponse.json(
+    { comment: { ...comment, reactions: [] } },
+    { status: 201 }
+  );
 }
 
-export async function DELETE(request: NextRequest, { params }: Params) {
+export async function DELETE(request: NextRequest, { params: _params }: Params) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user.id) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 403 });

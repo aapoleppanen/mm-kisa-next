@@ -7,6 +7,7 @@ export const insertMatches = async (): Promise<SeedResult> => {
   const result = emptySeedResult();
   try {
     const tournament = await getActiveTournament();
+    if (!tournament.fdCompetition) throw new Error("fdCompetition not set");
     const path = `https://api.football-data.org/v4/competitions/${tournament.fdCompetition}/matches`;
     const response = await fetch(path, {
       headers: { "X-Auth-Token": `${process.env.FD_API_TOKEN}` },

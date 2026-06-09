@@ -1,9 +1,10 @@
 import { getConfig, isPrePicksLocked } from "@/lib/config";
 import prisma from "@/lib/prisma";
+import { getActiveTournament } from "@/lib/tournament";
 import { updateMatchOdds } from "@/modules/api/odds/updateMatchOdds";
 import { updatePlayerOdds } from "@/modules/api/odds/updatePlayerOdds";
 import { updateTeamOdds } from "@/modules/api/odds/updateTeamOdds";
-import { updateResults } from "@/modules/api/results/updateResults";
+import { fetchResults } from "@/modules/api/results/fetchResults";
 import { settleAll } from "@/modules/api/scoring/settle";
 import { revalidatePath } from "next/cache";
 
@@ -25,25 +26,27 @@ export async function GET(request: Request) {
   }
 
   const cfg = await getConfig();
+  const tournament = await getActiveTournament();
   const prePicksLocked = await isPrePicksLocked(cfg.prePicksLockAt);
+  const useVeikkausOdds = tournament.fixtureSource === "VEIKKAUS";
 
   if (!prePicksLocked) {
-    const [team, player, match] = await Promise.all([
-      updateTeamOdds(),
-      updatePlayerOdds(),
-      updateMatchOdds(),
-    ]);
+    const odds = useVeikkausOdds
+      ? await Promise.all([updateTeamOdds(), updatePlayerOdds(), updateMatchOdds()])
+      : null;
     await prisma.config.update({
       where: { id: 1 },
       data: { lastCronRunAt: new Date() },
     });
-    return Response.json({ team, player, match });
+    if (useVeikkausOdds) {
+      const [team, player, match] = odds!;
+      return Response.json({ team, player, match });
+    }
+    return Response.json({ oddsSkipped: true });
   }
 
-  const [results, matchOdds] = await Promise.all([
-    updateResults(),
-    updateMatchOdds(),
-  ]);
+  const results = await fetchResults();
+  const matchOdds = useVeikkausOdds ? await updateMatchOdds() : null;
   await settleAll();
   await prisma.config.update({
     where: { id: 1 },

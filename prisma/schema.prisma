@@ -25,35 +25,43 @@ enum Stage {
 }
 
 model Config {
-  id                  Int         @id @default(1)
-  scoringMode         ScoringMode @default(FIXED_ODDS)
-  startingCredits     Float       @default(500) @db.Real
-  maxBetAmount        Float       @default(50) @db.Real
-  lockLeadHours       Int         @default(1)
-  prePicksLockAt      DateTime?
-  rakePercent         Float       @default(0) @db.Real
-  exactScorePoints    Int         @default(3)
-  goalDiffPoints      Int         @default(2)
-  tendencyPoints      Int         @default(1)
-  maintenanceMode     Boolean     @default(false)
-  cronSecret          String?
-  winnerBonusFactor   Float       @default(10) @db.Real
-  topScorerBonusFactor Float      @default(10) @db.Real
-  actualWinnerTeamId  Int?
-  actualTopScorerId   Int?
-  lastCronRunAt       DateTime?
-  updatedAt           DateTime    @updatedAt
+  id                   Int         @id @default(1)
+  scoringMode          ScoringMode @default(FIXED_ODDS)
+  startingCredits      Float       @default(500) @db.Real
+  maxBetAmount         Float       @default(50) @db.Real
+  lockLeadHours        Int         @default(1)
+  prePicksLockAt       DateTime?
+  rakePercent          Float       @default(0) @db.Real
+  exactScorePoints     Int         @default(3)
+  goalDiffPoints       Int         @default(2)
+  tendencyPoints       Int         @default(1)
+  maintenanceMode      Boolean     @default(false)
+  cronSecret           String?
+  winnerBonusFactor    Float       @default(10) @db.Real
+  topScorerBonusFactor Float       @default(10) @db.Real
+  actualWinnerTeamId   Int?
+  actualTopScorerId    Int?
+  lastCronRunAt        DateTime?
+  updatedAt            DateTime    @updatedAt
+}
+
+enum FixtureSource {
+  ESPN
+  FOOTBALL_DATA
+  VEIKKAUS
 }
 
 model Tournament {
-  id                  Int      @id @default(autoincrement())
-  name                String
-  fdCompetition       String
-  veikkausCtids       String
-  startDate           DateTime
-  veikkausWinnerEvent String
-  veikkausScorerEvent String
-  isActive            Boolean  @default(false)
+  id                     Int           @id @default(autoincrement())
+  name                   String
+  startDate              DateTime
+  fixtureSource          FixtureSource @default(ESPN)
+  espnLeagueSlug         String?
+  fdCompetition          String?
+  veikkausDrilldownTagId Int?
+  veikkausWinnerEvent    String?
+  veikkausScorerEvent    String?
+  isActive               Boolean       @default(false)
 }
 
 model TeamNameAlias {
@@ -119,41 +127,56 @@ model Pick {
   predAway      Int?
   awardedPoints Float   @default(0) @db.Real
 
-  @@index([userId, matchId])
   @@unique([userId, matchId])
+  @@index([userId, matchId])
 }
 
 model Comment {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   content   String
+  gifUrl    String?
   matchId   Int
-  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  match     Match      @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reactions Reaction[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  emoji     String
+  commentId String
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+  @@unique([commentId, userId, emoji])
 }
 
 // better-auth tables
 model User {
-  id               String    @id @default(cuid())
+  id               String     @id @default(cuid())
   name             String
-  email            String    @unique
-  emailVerified    Boolean   @default(false)
+  email            String     @unique
+  emailVerified    Boolean    @default(false)
   image            String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  picks            Pick[]    @relation("userPicks")
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  picks            Pick[]     @relation("userPicks")
   comments         Comment[]
-  winnerPick       Team?     @relation(fields: [teamId], references: [id])
-  topScorerPick    Player?   @relation(fields: [playerId], references: [id])
+  reactions        Reaction[]
+  winnerPick       Team?      @relation(fields: [teamId], references: [id])
+  topScorerPick    Player?    @relation(fields: [playerId], references: [id])
   sessions         Session[]
   accounts         Account[]
   teamId           Int?
   playerId         Int?
-  credits          Float     @default(500) @db.Real
-  remainingCredits Float     @default(0) @db.Real
-  points           Float     @default(0) @db.Real
+  credits          Float      @default(500) @db.Real
+  remainingCredits Float      @default(0) @db.Real
+  points           Float      @default(0) @db.Real
   role             String?
   banned           Boolean?
   banReason        String?

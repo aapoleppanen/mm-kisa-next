@@ -3,12 +3,14 @@ import type { Stage, Tournament } from "@prisma/client";
 import prisma from "@/lib/prisma";
 
 const DEFAULT_TOURNAMENT = {
-  name: "Euro 2024",
-  fdCompetition: "EC",
-  veikkausCtids: "1-15-149",
-  startDate: new Date("2024-06-14T19:00:00Z"),
-  veikkausWinnerEvent: "Euro 2024 - Mestari",
-  veikkausScorerEvent: "Euro 2024 - Paras maalintekijä",
+  name: "World Cup 2026",
+  startDate: new Date("2026-06-11T19:00:00Z"),
+  fixtureSource: "ESPN" as const,
+  espnLeagueSlug: "fifa.world",
+  fdCompetition: "WC",
+  veikkausDrilldownTagId: 2086,
+  veikkausWinnerEvent: "World Cup - Group Winner & Tournament Winner",
+  veikkausScorerEvent: "World Cup - Golden Boot - Top Goalscorer",
   isActive: true,
 };
 
@@ -29,12 +31,8 @@ export const getActiveTournament = cache(async (): Promise<Tournament> => {
   });
 });
 
-export function veikkausVariables(tournament: Tournament) {
-  return {
-    sportIds: ["1"] as [string],
-    ctids: [tournament.veikkausCtids] as [string],
-    lang: "fi",
-  };
+export function veikkausVariables(_tournament: Tournament): never {
+  throw new Error("Veikkaus odds source not configured");
 }
 
 const FD_STAGE_MAP: Record<string, Stage> = {

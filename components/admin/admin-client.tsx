@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Config, Match, Player, Result, Stage, Team, Tournament } from "@prisma/client";
+import type { Config, FixtureSource, Match, Player, Result, Stage, Team, Tournament } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -201,12 +201,32 @@ export default function AdminClient({
             <Input value={tournament.name} onChange={(e) => setTournament({ ...tournament, name: e.target.value })} />
           </label>
           <label className="text-sm">
-            FD competition code
-            <Input value={tournament.fdCompetition} onChange={(e) => setTournament({ ...tournament, fdCompetition: e.target.value })} />
+            Fixture source
+            <select
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+              value={tournament.fixtureSource}
+              onChange={(e) => setTournament({ ...tournament, fixtureSource: e.target.value as FixtureSource })}
+            >
+              <option value="ESPN">ESPN</option>
+              <option value="FOOTBALL_DATA">Football-data</option>
+              <option value="VEIKKAUS">Veikkaus</option>
+            </select>
           </label>
           <label className="text-sm">
-            Veikkaus ctids
-            <Input value={tournament.veikkausCtids} onChange={(e) => setTournament({ ...tournament, veikkausCtids: e.target.value })} />
+            ESPN league slug
+            <Input value={tournament.espnLeagueSlug ?? ""} onChange={(e) => setTournament({ ...tournament, espnLeagueSlug: e.target.value || null })} />
+          </label>
+          <label className="text-sm">
+            FD competition code
+            <Input value={tournament.fdCompetition ?? ""} onChange={(e) => setTournament({ ...tournament, fdCompetition: e.target.value || null })} />
+          </label>
+          <label className="text-sm">
+            Veikkaus drilldown tag ID
+            <Input
+              type="number"
+              value={tournament.veikkausDrilldownTagId ?? ""}
+              onChange={(e) => setTournament({ ...tournament, veikkausDrilldownTagId: e.target.value ? Number(e.target.value) : null })}
+            />
           </label>
           <label className="text-sm">
             Start date
@@ -218,11 +238,11 @@ export default function AdminClient({
           </label>
           <label className="text-sm">
             Veikkaus winner event
-            <Input value={tournament.veikkausWinnerEvent} onChange={(e) => setTournament({ ...tournament, veikkausWinnerEvent: e.target.value })} />
+            <Input value={tournament.veikkausWinnerEvent ?? ""} onChange={(e) => setTournament({ ...tournament, veikkausWinnerEvent: e.target.value || null })} />
           </label>
           <label className="text-sm">
             Veikkaus scorer event
-            <Input value={tournament.veikkausScorerEvent} onChange={(e) => setTournament({ ...tournament, veikkausScorerEvent: e.target.value })} />
+            <Input value={tournament.veikkausScorerEvent ?? ""} onChange={(e) => setTournament({ ...tournament, veikkausScorerEvent: e.target.value || null })} />
           </label>
         </div>
         <Button onClick={saveTournament} disabled={loading}>Save tournament</Button>

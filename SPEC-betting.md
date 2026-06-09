@@ -267,27 +267,58 @@ Anyone can hit `/api/cron` and trigger settlement/odds jobs. Add a `CRON_SECRET`
 **The single biggest reusability problem:** the whole data pipeline is hardcoded to Euro 2024. To run the next tournament today you'd have to edit code — `competition = "EC"`, `euro2024Variables`/`euro2024startDate`, the Veikkaus event names (`"Euro 2024 - Mestari"`, `"Euro 2024 - Paras maalintekijä"`), and the `VeikkausFDEuroTeamMap` translation table. Move all of it behind admin config so a new cup is a form, not a deploy.
 
 #### Active-tournament config
-Add a `Tournament` model (or a `tournament` block on `Config`) holding everything currently hardcoded:
+Add a `Tournament` model (or a `tournament` block on `Config`) holding everything currently hardcoded, now multi-provider (see §6.5 *Data sources* below):
 ```prisma
 model Tournament {
-  id              Int      @id @default(autoincrement())
-  name            String                    // "World Cup 2026"
-  fdCompetition   String                    // football-data code, e.g. "EC" / "WC"
-  startDate       DateTime
-  veikkausWinnerEvent    String             // "Euro 2024 - Mestari"
-  veikkausScorerEvent    String             // "Euro 2024 - Paras maalintekijä"
-  isActive        Boolean  @default(false)   // one active at a time
+  id                     Int      @id @default(autoincrement())
+  name                   String                 // "World Cup 2026"
+  startDate              DateTime
+  fixtureSource          FixtureSource @default(ESPN)  // where matches/results come from
+  // provider-specific identifiers (only the active source's id is required):
+  espnLeagueSlug         String?                // "fifa.world"
+  fdCompetition          String?                // football-data code, e.g. "WC" / "EC"
+  veikkausDrilldownTagId Int?                   // 2086 = WC 2026 (odds only)
+  veikkausWinnerEvent    String?                // "World Cup - Group Winner & Tournament Winner"
+  veikkausScorerEvent    String?                // "World Cup - Golden Boot - Top Goalscorer"
+  isActive               Boolean  @default(false) // one active at a time
 }
+enum FixtureSource { ESPN  FOOTBALL_DATA  VEIKKAUS }
 ```
-`updateResults` / `insertTeams` read `fdCompetition`; the odds jobs read the Veikkaus event names. `lib/config.ts`'s `euro2024*` constants are deleted. This also makes the GraphQL `events` query parameters config-driven.
+The data jobs read the active source's identifier; `lib/config.ts`'s `euro2024*` constants are deleted.
 
-#### Team-name mapping as data
-`VeikkausFDEuroTeamMap` (Veikkaus name → football-data name) is a hardcoded object in `utils/adapterUtils.ts`. When a name doesn't match, the odds job silently drops that team. Move it to a `TeamNameAlias` table (`{ veikkausName, teamId }`) editable in the admin panel, and have the odds jobs **log/surface unmapped names** instead of dropping them silently (feeds the §4.2 data-health panel).
+#### Data sources / API structure (verified June 2026)
+
+The old `veikkausGraphQlEndpoint` (`v3.middle…/midas/graphql`) is dead. Three working free sources, probed live:
+
+**1. ESPN hidden API — recommended primary (free, no key, single source for fixtures + results + logos).**
+```
+GET https://site.api.espn.com/apis/site/v2/sports/soccer/{slug}/scoreboard?dates=YYYYMMDD
+    slug = "fifa.world" (World Cup), "uefa.euro" (Euros), …  → store on Tournament.espnLeagueSlug
+```
+Per `events[]`: `name`, `date`, `status.type.name` (`STATUS_SCHEDULED` / `STATUS_FULL_TIME` / …), and `competitions[0].competitors[]` → `{ homeAway: "home"|"away", team.displayName, team.abbreviation, team.logo, score }`. One call gives fixtures, live state, final scores **and** crest logos. English names (align with football-data). Iterate `?dates=` per matchday to seed the whole schedule. Caveat: undocumented/unofficial — no SLA, could change; keep football-data as fallback.
+
+**2. football-data.org — already integrated, official, token-gated.** `WC` competition code: `/v4/competitions/WC/matches` (fixtures+results), `/teams` (teams+crests). Free tier ~10 req/min. Official but rate-limited; needs `FD_API_TOKEN`.
+
+**3. Veikkaus content-service — odds only (new REST endpoint, replaces the dead GraphQL).**
+```
+GET https://content.ob.veikkaus.fi/content-service/api/v1/q/event-list
+    ?drilldownTagIds={competitionId}      # 2086 = WC 2026 → Tournament.veikkausDrilldownTagId
+    &eventSortsIncluded=MTCH              # MTCH=matches, TNMT=outrights, "MTCH,TNMT"=both (one call)
+    &includeChildMarkets=true&lang=fi-FI&channel=
+```
+Response is `data.events[]` (GraphQL-wrapped — **not** the old `sports[0].tournaments[0].events`). Per match event: `teams[]` → `{ side: "HOME"|"AWAY", name }` (no string-splitting needed), `startTime`, and `markets[]` where `name == "Voittaja (1X2)"` → `outcomes[]` `{ type, name (team name or "Tasapeli"), prices[0].decimal }`. Outright events (`TNMT`) carry the winner/top-scorer markets the old code used. Also exposes `resulted` / `result` / `outcomeScore`. **Finnish team names** ("Meksiko") — the only source needing a translation map.
+
+#### Pari-mutuel collapses this to one source
+Since you're going **pari-mutuel, bookmaker odds aren't needed** — which removes the whole reason to touch Veikkaus, and with it the Veikkaus→FD name-mapping problem. Recommended: **ESPN as the sole `fixtureSource`** for teams, fixtures (kickoff + stage from groupings), and results. football-data stays as a configurable fallback. Veikkaus integration becomes **optional**, only wired up if you ever switch to `FIXED_ODDS`/`COMPRESSED_ODDS` and want displayed odds.
+
+#### Team-name mapping (only if mixing providers)
+`VeikkausFDEuroTeamMap` in `utils/adapterUtils.ts` exists solely to reconcile Veikkaus's Finnish names with football-data's English. **With a single ESPN source it's unnecessary** — delete it. Keep a `TeamNameAlias` table (`{ sourceName, teamId }`) only if you enable the Veikkaus odds source; in that case the odds job must **surface unmapped names** (feeds the §4.2 health panel) rather than silently dropping them as it does today.
 
 #### Seeding actions (admin buttons, idempotent)
-- **Seed teams** → `insertTeams` (now upsert, §6.3). Then admin can fix crests/names by hand.
-- **Seed matches** → run the fixture import. Currently matches are created lazily as a side effect of `updateResults`; split out an explicit `insertMatches` (look up teams by name, set `startTime` + `stage`) so the fixture list exists before odds/picks open. Surface teams it couldn't resolve.
-- **Refresh odds** → match / team-winner / top-scorer jobs, individually triggerable.
+- **Seed teams** → from the active `fixtureSource` (ESPN logos / FD crests), upsert (§6.3). Then admin can fix crests/names by hand.
+- **Seed matches** → explicit `insertMatches` reading the ESPN scoreboard (iterate `?dates=` across the schedule): upsert each match by teams + kickoff, derive `stage` from the ESPN grouping. Today matches are created lazily as a side effect of `updateResults` — split this out so the fixture list exists before picks open. Surface any teams it couldn't resolve.
+- **Fetch results** → ESPN `status.type.name == STATUS_FULL_TIME` + competitor scores → `homeGoals`/`awayGoals`/`result`, respecting `resultOverridden`.
+- **Refresh odds** *(optional — only if a Veikkaus odds source is enabled)* → match / team-winner / top-scorer jobs, individually triggerable.
 - Each action returns a summary (`inserted`, `updated`, `skipped`, `unmapped[]`) shown as a toast + in the health panel — no more reading server logs.
 
 #### Manual CRUD fallback

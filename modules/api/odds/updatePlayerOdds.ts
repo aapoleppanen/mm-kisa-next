@@ -1,10 +1,12 @@
 import request from "graphql-request";
-import { veikkausGraphQlEndpoint } from "../../../lib/config";
 import prisma from "../../../lib/prisma";
 import { events } from "./queries";
 import { EventsResponse } from "./types";
 import { getActiveTournament, veikkausVariables } from "@/lib/tournament";
 import { emptySeedResult, type SeedResult } from "@/lib/seed-result";
+
+const veikkausGraphQlEndpoint =
+  "https://v3.middle.prod.gcp.veikkaus.fi/midas/graphql";
 
 export const updatePlayerOdds = async (): Promise<SeedResult> => {
   const result = emptySeedResult();
