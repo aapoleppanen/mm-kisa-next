@@ -18,10 +18,8 @@ export default async function ProtectedLayout({ children }: { children: React.Re
     <>
       {cfg.maintenanceMode && <MaintenanceBanner />}
       <Header session={session} isAdmin={isAdmin} />
-      <main className="hidden sm:block pt-16 pb-6 w-[80vw] mx-auto">
-        {children}
-      </main>
-      <main className="block sm:hidden pb-20">
+      {/* Single render; responsive via CSS (was previously duplicated, mounting every page twice). */}
+      <main className="pb-20 sm:pt-16 sm:pb-6 sm:w-[80vw] sm:mx-auto">
         {children}
       </main>
       <BottomNav isAdmin={isAdmin} />

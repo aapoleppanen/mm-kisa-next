@@ -36,7 +36,7 @@ export default async function MatchesPage() {
 
   return (
     <MatchesClient
-      matches={JSON.parse(JSON.stringify(matchesWithMaxBet))}
+      matches={matchesWithMaxBet}
       initialCredits={userRecord?.remainingCredits ?? 0}
       backgroundUrl="https://storage.googleapis.com/em-kisa-2024-bucket/background_6.jpg"
       scoringMode={cfg.scoringMode}

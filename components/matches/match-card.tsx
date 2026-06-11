@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { Match, Result, ScoringMode, Team } from "@prisma/client";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -9,8 +10,14 @@ import { Button } from "@/components/ui/button";
 import type { PoolData } from "@/lib/pools";
 import { Input } from "@/components/ui/input";
 import { decimalOdds, disabledToday } from "@/lib/config";
-import MatchComments from "./match-comments";
 import { cn } from "@/lib/utils";
+
+// Comments are only needed once a card is expanded — keep them out of the
+// initial matches bundle.
+const MatchComments = dynamic(() => import("./match-comments"), {
+  ssr: false,
+  loading: () => <p className="text-xs text-muted-foreground py-2 text-center">Loading comments…</p>,
+});
 
 type Props = {
   match: Match & { away: Team; home: Team };
@@ -214,7 +221,7 @@ export default function MatchCard({
         
         {crest ? (
           <div className="h-10 w-10 rounded-full border border-slate-100 flex items-center justify-center p-0.5 bg-slate-50 shadow-sm overflow-hidden shrink-0">
-            <img src={crest} alt="" className="h-full w-full object-contain" />
+            <img src={crest} alt="" loading="lazy" decoding="async" width={40} height={40} className="h-full w-full object-contain" />
           </div>
         ) : (
           <div className="h-10 w-10 rounded-full border border-slate-100 flex items-center justify-center bg-slate-50 text-slate-400 shadow-sm shrink-0">

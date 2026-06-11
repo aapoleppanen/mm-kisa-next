@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Match, Pick, Result, ScoringMode, Team } from "@prisma/client";
 import { format, isSameDay } from "date-fns";
 import useSWR from "swr";
@@ -8,7 +8,10 @@ import { roundNumber } from "@/utils/numberUtils";
 import MatchCard from "./match-card";
 import ScoringExplainer, { type ScoringParams } from "./scoring-explainer";
 import PaymentReminder from "./payment-reminder";
+import FootballLoader from "@/components/ui/football-loader";
 import type { PoolData } from "@/lib/pools";
+
+const PAGE_SIZE = 12;
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -51,6 +54,28 @@ export default function MatchesClient({
     { refreshInterval: 30000, refreshWhenHidden: false, revalidateOnFocus: false }
   );
 
+  // Feed-style progressive rendering: only mount the first batch of cards, then
+  // reveal more as the user scrolls (104 matches × 2 crests is a lot to mount).
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const hasMore = visibleCount < matches.length;
+
+  useEffect(() => {
+    if (!hasMore) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCount((c) => Math.min(c + PAGE_SIZE, matches.length));
+        }
+      },
+      { rootMargin: "600px 0px" } // start loading before the sentinel is on screen
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, matches.length, visibleCount]);
+
   if (!matches.length) {
     return (
       <div className="soccer-pitch-bg min-h-screen flex items-center justify-center p-8">
@@ -63,6 +88,7 @@ export default function MatchesClient({
     );
   }
 
+  const visibleMatches = matches.slice(0, visibleCount);
   let lastDate = new Date(matches[0].startTime);
 
   return (
@@ -98,7 +124,7 @@ export default function MatchesClient({
 
       {/* Match list */}
       <div className="flex flex-col items-center px-4 pt-6 pb-12 gap-5 max-w-xl mx-auto">
-        {matches.map((match) => {
+        {visibleMatches.map((match) => {
           const pick = match.Pick?.[0];
           const pickResult = pick?.pickedResult ?? Result.NO_RESULT;
           const betAmount = pick?.betAmount ?? 0;
@@ -135,6 +161,13 @@ export default function MatchesClient({
             </div>
           );
         })}
+
+        {/* Infinite-scroll sentinel + loader */}
+        {hasMore && (
+          <div ref={sentinelRef} className="w-full flex justify-center py-6">
+            <FootballLoader size="sm" text={`Loading more… (${visibleCount}/${matches.length})`} />
+          </div>
+        )}
       </div>
     </div>
   );
