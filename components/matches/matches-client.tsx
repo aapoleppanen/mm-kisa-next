@@ -7,6 +7,7 @@ import useSWR from "swr";
 import { roundNumber } from "@/utils/numberUtils";
 import MatchCard from "./match-card";
 import ScoringExplainer, { type ScoringParams } from "./scoring-explainer";
+import PaymentReminder from "./payment-reminder";
 import type { PoolData } from "@/lib/pools";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -25,6 +26,8 @@ type Props = {
   scoringMode: ScoringMode;
   lockLeadHours: number;
   scoringParams: ScoringParams;
+  mobilepayNumber: string | null;
+  hasPaid: boolean;
 };
 
 export default function MatchesClient({
@@ -33,6 +36,8 @@ export default function MatchesClient({
   scoringMode,
   lockLeadHours,
   scoringParams,
+  mobilepayNumber,
+  hasPaid,
 }: Props) {
   const [credits, setCredits] = useState(initialCredits);
   const isPariMutuel = scoringMode === "PARI_MUTUEL";
@@ -85,6 +90,11 @@ export default function MatchesClient({
 
       {/* How scoring works */}
       <ScoringExplainer scoringMode={scoringMode} params={scoringParams} />
+
+      {/* How to pay */}
+      {mobilepayNumber && (
+        <PaymentReminder mobilepayNumber={mobilepayNumber} initialHasPaid={hasPaid} />
+      )}
 
       {/* Match list */}
       <div className="flex flex-col items-center px-4 pt-6 pb-12 gap-5 max-w-xl mx-auto">

@@ -11,10 +11,10 @@ export default async function MatchesPage() {
   const userId = session!.user.id;
   const cfg = await getConfig();
 
-  const [userCredits, matches] = await Promise.all([
+  const [userRecord, matches] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
-      select: { remainingCredits: true },
+      select: { remainingCredits: true, hasPaid: true },
     }),
     prisma.match.findMany({
       include: {
@@ -37,7 +37,7 @@ export default async function MatchesPage() {
   return (
     <MatchesClient
       matches={JSON.parse(JSON.stringify(matchesWithMaxBet))}
-      initialCredits={userCredits?.remainingCredits ?? 0}
+      initialCredits={userRecord?.remainingCredits ?? 0}
       backgroundUrl="https://storage.googleapis.com/em-kisa-2024-bucket/background_6.jpg"
       scoringMode={cfg.scoringMode}
       lockLeadHours={cfg.lockLeadHours}
@@ -49,6 +49,8 @@ export default async function MatchesPage() {
         maxBetAmount: cfg.maxBetAmount,
         startingCredits: cfg.startingCredits,
       }}
+      mobilepayNumber={cfg.mobilepayNumber ?? null}
+      hasPaid={userRecord?.hasPaid ?? false}
     />
   );
 }

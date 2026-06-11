@@ -171,6 +171,17 @@ export default function AdminClient({
     loadUsers();
   };
 
+  const deleteUser = async (userId: string, userName: string) => {
+    if (!confirm(`Delete user "${userName}"? This cannot be undone.`)) return;
+    const res = await fetch(`/api/admin/users/${userId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("User deleted");
+      loadUsers();
+    } else {
+      toast.error("Failed to delete user");
+    }
+  };
+
   const togglePayment = async (userId: string, hasPaid: boolean) => {
     const res = await fetch(`/api/admin/users/${userId}/payment`, {
       method: "PATCH",
@@ -544,6 +555,9 @@ export default function AdminClient({
                 </Button>
                 <Button size="sm" variant={u.role === "user" ? "default" : "outline"} onClick={() => setUserRole(u.id, "user")}>
                   User
+                </Button>
+                <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200" onClick={() => deleteUser(u.id, u.name)}>
+                  Delete
                 </Button>
               </div>
             </div>
