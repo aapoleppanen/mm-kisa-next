@@ -35,6 +35,31 @@ export function veikkausVariables(_tournament: Tournament): never {
   throw new Error("Veikkaus odds source not configured");
 }
 
+// Veikkaus public content-service (REST, no key). `lang=en-GB` returns English
+// team/player names that line up with the ESPN/football-data fixture data.
+const VEIKKAUS_CONTENT_BASE =
+  "https://content.ob.veikkaus.fi/content-service/api/v1/q/event-list";
+
+export type VeikkausOutcome = { name: string; prices?: { decimal: number }[] };
+export type VeikkausMarket = { name: string; outcomes?: VeikkausOutcome[] };
+export type VeikkausEvent = { name: string; markets?: VeikkausMarket[] };
+
+/** Fetch tournament-level (outright) events — tournament winner, top scorer, etc. */
+export async function fetchVeikkausOutrights(tagId: number): Promise<VeikkausEvent[]> {
+  const url =
+    `${VEIKKAUS_CONTENT_BASE}?eventSortsIncluded=TNMT&includeChildMarkets=true` +
+    `&drilldownTagIds=${tagId}&lang=en-GB&channel=`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Veikkaus content-service ${res.status}`);
+  const json = await res.json();
+  return (json?.data?.events ?? []) as VeikkausEvent[];
+}
+
+/** Decimal odds (e.g. 12.0) → the integer ×100 form stored on Team/Player. */
+export function oddsToInt(decimal: number): number {
+  return Math.round(decimal * 100);
+}
+
 const FD_STAGE_MAP: Record<string, Stage> = {
   GROUP_STAGE: "GROUP",
   LAST_16: "R16",

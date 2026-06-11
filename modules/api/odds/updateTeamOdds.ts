@@ -1,47 +1,48 @@
-import request from "graphql-request";
 import prisma from "../../../lib/prisma";
-import { events } from "./queries";
-import { EventsResponse } from "./types";
-import { getActiveTournament, veikkausVariables } from "@/lib/tournament";
-import { getTeamNameMap } from "@/lib/team-map";
+import {
+  fetchVeikkausOutrights,
+  getActiveTournament,
+  oddsToInt,
+} from "@/lib/tournament";
 import { emptySeedResult, type SeedResult } from "@/lib/seed-result";
 
-const veikkausGraphQlEndpoint =
-  "https://v3.middle.prod.gcp.veikkaus.fi/midas/graphql";
-
+// Tournament-winner odds per team, from the Veikkaus content-service (free, no key).
 export const updateTeamOdds = async (): Promise<SeedResult> => {
   const result = emptySeedResult();
   try {
     const tournament = await getActiveTournament();
-    const teamMap = await getTeamNameMap();
-    const response = await request<EventsResponse>(
-      veikkausGraphQlEndpoint,
-      events,
-      veikkausVariables(tournament)
-    );
+    if (tournament.veikkausDrilldownTagId == null) {
+      result.errors.push("Tournament has no veikkausDrilldownTagId set");
+      return result;
+    }
 
-    for (const event of response.sports[0].tournaments[0].events) {
-      if (event.name !== tournament.veikkausWinnerEvent) continue;
+    const events = await fetchVeikkausOutrights(tournament.veikkausDrilldownTagId);
+    const event = events.find((e) => e.name === tournament.veikkausWinnerEvent);
+    if (!event) {
+      result.errors.push(`Winner market "${tournament.veikkausWinnerEvent}" not found`);
+      return result;
+    }
 
-      for (const comp of event.ebetDraws[0].row.competitors) {
-        const fdName = teamMap[comp.name];
-        if (!fdName) {
-          if (!result.unmapped.includes(comp.name)) result.unmapped.push(comp.name);
-          continue;
-        }
-
-        const existing = await prisma.team.findUnique({ where: { name: fdName } });
-        if (!existing) {
-          result.unmapped.push(fdName);
-          continue;
-        }
-
-        await prisma.team.update({
-          where: { name: fdName },
-          data: { winningOdds: comp.odds },
-        });
-        result.updated++;
+    const outcomes = event.markets?.[0]?.outcomes ?? [];
+    for (const outcome of outcomes) {
+      const name = outcome.name?.trim();
+      const decimal = outcome.prices?.[0]?.decimal;
+      if (!name || decimal == null) {
+        result.skipped++;
+        continue;
       }
+
+      const existing = await prisma.team.findUnique({ where: { name } });
+      if (!existing) {
+        if (!result.unmapped.includes(name)) result.unmapped.push(name);
+        continue;
+      }
+
+      await prisma.team.update({
+        where: { name },
+        data: { winningOdds: oddsToInt(decimal) },
+      });
+      result.updated++;
     }
 
     return result;
