@@ -33,26 +33,29 @@ export async function GET() {
   const cfg = await getConfig();
   const rakeFactor = 1 - cfg.rakePercent / 100;
 
-  const picks = await prisma.pick.findMany({
+  // Aggregate in Postgres (sum per match + outcome) instead of pulling every pick row.
+  const grouped = await prisma.pick.groupBy({
+    by: ["matchId", "pickedResult"],
     where: { betAmount: { gt: 0 } },
-    select: { matchId: true, betAmount: true, pickedResult: true },
+    _sum: { betAmount: true },
   });
 
   const byMatch = new Map<number, { pool: number; byOutcome: OutcomeTotals }>();
 
-  for (const p of picks) {
-    let entry = byMatch.get(p.matchId);
+  for (const g of grouped) {
+    const amount = g._sum.betAmount ?? 0;
+    let entry = byMatch.get(g.matchId);
     if (!entry) {
       entry = { pool: 0, byOutcome: emptyOutcomes() };
-      byMatch.set(p.matchId, entry);
+      byMatch.set(g.matchId, entry);
     }
-    entry.pool += p.betAmount;
+    entry.pool += amount;
     if (
-      p.pickedResult === Result.HOME_TEAM ||
-      p.pickedResult === Result.DRAW ||
-      p.pickedResult === Result.AWAY_TEAM
+      g.pickedResult === Result.HOME_TEAM ||
+      g.pickedResult === Result.DRAW ||
+      g.pickedResult === Result.AWAY_TEAM
     ) {
-      entry.byOutcome[p.pickedResult] += p.betAmount;
+      entry.byOutcome[g.pickedResult] += amount;
     }
   }
 

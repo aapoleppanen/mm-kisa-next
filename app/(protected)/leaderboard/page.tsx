@@ -23,7 +23,6 @@ export default async function LeaderboardPage() {
       "User".points as points,
       ucv."remainingCredits" as remainingCredits
     FROM "User"
-    LEFT JOIN "Team" ON "Team".id = "User"."teamId" AND "Team".id = 4
     LEFT JOIN "UserCreditsView" ucv ON ucv."userId" = "User".id
     ORDER BY points DESC;
   `) as LeaderBoardUser[];

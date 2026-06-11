@@ -99,6 +99,8 @@ model Match {
   result           Result?
   stage            Stage     @default(GROUP)
   resultOverridden Boolean   @default(false)
+
+  @@index([startTime])
 }
 
 model Player {
@@ -129,6 +131,7 @@ model Pick {
 
   @@unique([userId, matchId])
   @@index([userId, matchId])
+  @@index([matchId])
 }
 
 model Comment {
@@ -142,6 +145,8 @@ model Comment {
   reactions Reaction[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+
+  @@index([matchId])
 }
 
 model Reaction {
@@ -183,6 +188,7 @@ model User {
   banExpires       DateTime?
 
   @@index([id])
+  @@index([points])
 }
 
 model Session {
