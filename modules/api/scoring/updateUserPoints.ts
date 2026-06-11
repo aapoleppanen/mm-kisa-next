@@ -23,16 +23,17 @@ export async function syncUserPointsFromPicks(cfg: Config): Promise<void> {
   await Promise.all(
     users.map((user) => {
       const pickTotal = user.picks.reduce((sum, p) => sum + p.awardedPoints, 0);
-      let bonus = 0;
+      // Correct outright picks are a tiebreaker only — they never change `points`.
+      let tiebreak = 0;
       if (cfg.actualWinnerTeamId && user.teamId === cfg.actualWinnerTeamId && user.winnerPick) {
-        bonus += log2OddsBonus(user.winnerPick.winningOdds, cfg.winnerBonusFactor);
+        tiebreak += log2OddsBonus(user.winnerPick.winningOdds, cfg.winnerBonusFactor);
       }
       if (cfg.actualTopScorerId && user.playerId === cfg.actualTopScorerId && user.topScorerPick) {
-        bonus += log2OddsBonus(user.topScorerPick.odds, cfg.topScorerBonusFactor);
+        tiebreak += log2OddsBonus(user.topScorerPick.odds, cfg.topScorerBonusFactor);
       }
       return prisma.user.update({
         where: { id: user.id },
-        data: { points: pickTotal + bonus },
+        data: { points: pickTotal, tiebreak },
       });
     })
   );

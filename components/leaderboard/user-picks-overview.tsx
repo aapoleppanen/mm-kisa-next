@@ -51,7 +51,10 @@ export default function UserPicksOverview({
         </div>
       </div>
 
-      {/* Winner & Scorer Pick Outrights */}
+      {/* Winner & Scorer Pick Outrights — tiebreakers only, not added to points */}
+      <p className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider text-center">
+        Tiebreakers (don&apos;t affect points)
+      </p>
       <div className="grid grid-cols-2 gap-3.5 text-xs">
         <div className={cn(
           "flex flex-col items-center p-2.5 rounded-xl border bg-white shadow-sm gap-0.5",

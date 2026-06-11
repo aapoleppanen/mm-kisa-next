@@ -20,7 +20,10 @@ export async function settleExactScore(cfg: Config): Promise<void> {
     UPDATE "Pick" p SET "awardedPoints" =
       CASE
         WHEN p."predHome" = m."homeGoals" AND p."predAway" = m."awayGoals" THEN ${exactPts}::float
-        WHEN (p."predHome" - p."predAway") = (m."homeGoals" - m."awayGoals") THEN ${goalDiffPts}::float
+        -- goal-difference tier rewards margin precision, which only exists for
+        -- decisive games; a draw has no margin, so a correct draw scores tendency.
+        WHEN m."homeGoals" <> m."awayGoals"
+          AND (p."predHome" - p."predAway") = (m."homeGoals" - m."awayGoals") THEN ${goalDiffPts}::float
         WHEN SIGN(p."predHome" - p."predAway") = SIGN(m."homeGoals" - m."awayGoals") THEN ${tendencyPts}::float
         ELSE 0
       END

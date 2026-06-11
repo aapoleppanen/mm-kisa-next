@@ -11,6 +11,7 @@ export type LeaderBoardUser = {
   image: User["image"];
   credits: User["credits"];
   points: User["points"];
+  tiebreak: User["tiebreak"];
   remainingcredits: number;
 };
 
@@ -23,10 +24,11 @@ export default async function LeaderboardPage() {
       "User".image as image,
       "User".credits as credits,
       "User".points as points,
+      "User".tiebreak as tiebreak,
       ucv."remainingCredits" as remainingCredits
     FROM "User"
     LEFT JOIN "UserCreditsView" ucv ON ucv."userId" = "User".id
-    ORDER BY points DESC;
+    ORDER BY points DESC, "User".tiebreak DESC;
   `) as LeaderBoardUser[];
 
   return <LeaderboardClient users={users} scoringMode={cfg.scoringMode} />;

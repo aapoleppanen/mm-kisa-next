@@ -185,6 +185,9 @@ model User {
   credits          Float      @default(500) @db.Real
   remainingCredits Float      @default(0) @db.Real
   points           Float      @default(0) @db.Real
+  // Odds-weighted value from correct tournament-winner / top-scorer picks.
+  // Used ONLY to break leaderboard ties — never added to `points`.
+  tiebreak         Float      @default(0) @db.Real
   role             String?
   banned           Boolean?
   banReason        String?

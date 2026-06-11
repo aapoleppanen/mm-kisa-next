@@ -33,8 +33,8 @@ function content(
         summary: "Predict the exact scoreline of each match.",
         points: [
           `Exact score: ${p.exactScorePoints} pts.`,
-          `Right goal difference (wrong score): ${p.goalDiffPoints} pts.`,
-          `Right winner only: ${p.tendencyPoints} pt.`,
+          `Right goal difference in a decisive game (wrong score): ${p.goalDiffPoints} pts.`,
+          `Right winner, or a correct draw (wrong score): ${p.tendencyPoints} pt.`,
           `Wrong: 0 pts.`,
         ],
       };
@@ -76,7 +76,11 @@ export default function ScoringExplainer({
   params: ScoringParams;
 }) {
   const [open, setOpen] = useState(false);
-  const { summary, points } = content(scoringMode, params);
+  const { summary, points: modePoints } = content(scoringMode, params);
+  const points = [
+    ...modePoints,
+    "Tournament winner & top-scorer picks only break ties — they never add to your total.",
+  ];
 
   return (
     <div className="mx-auto max-w-xl px-4 pt-3">
