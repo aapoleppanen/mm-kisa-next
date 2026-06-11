@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { signIn, signUp, useSession } from "@/lib/auth-client";
+import { signIn, signUp } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import FootballLoader from "@/components/ui/football-loader";
 
 type Mode = "signin" | "signup";
@@ -20,6 +19,15 @@ export default function SignInButtons() {
   const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [mobilepayNumber, setMobilepayNumber] = useState<string | null>(null);
+  const [showPayReminder, setShowPayReminder] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/public/config")
+      .then((r) => r.json())
+      .then((d) => setMobilepayNumber(d.mobilepayNumber ?? null))
+      .catch(() => {});
+  }, []);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,9 +43,13 @@ export default function SignInButtons() {
       if (error) {
         toast.error(error.message ?? "Sign up failed");
       } else {
-        toast.success("Account created! Signing you in…");
-        router.push("/matches");
-        router.refresh();
+        if (mobilepayNumber) {
+          setShowPayReminder(true);
+        } else {
+          toast.success("Account created! Signing you in…");
+          router.push("/matches");
+          router.refresh();
+        }
       }
     } else {
       const { error } = await signIn.email({
@@ -56,9 +68,44 @@ export default function SignInButtons() {
     setLoading(false);
   };
 
+  if (showPayReminder && mobilepayNumber) {
+    return (
+      <div className="flex flex-col items-center gap-4 w-full max-w-sm text-center">
+        <div className="text-4xl">💸</div>
+        <h3 className="text-lg font-bold text-slate-800">Remember to pay!</h3>
+        <p className="text-sm text-slate-600">
+          Send your entry fee via MobilePay to:
+        </p>
+        <div className="bg-primary/10 border border-primary/30 rounded-2xl px-6 py-3">
+          <span className="text-2xl font-black text-primary tracking-widest">{mobilepayNumber}</span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Your account is created. You can start playing right away — payment is tracked separately by the admin.
+        </p>
+        <Button
+          className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white font-bold h-11 hover-lift active-press"
+          onClick={() => {
+            router.push("/matches");
+            router.refresh();
+          }}
+        >
+          Got it, let&apos;s play!
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4 w-full max-w-sm">
-      {/* Email/password form */}
+      {mode === "signup" && mobilepayNumber && (
+        <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-800">
+          <span className="text-base leading-none mt-0.5">💳</span>
+          <span>
+            Entry fee via MobilePay to <strong>{mobilepayNumber}</strong> — you&apos;ll be reminded after sign-up.
+          </span>
+        </div>
+      )}
+
       <form onSubmit={handleEmailAuth} className="flex flex-col gap-3">
         {mode === "signup" && (
           <Input
@@ -99,10 +146,10 @@ export default function SignInButtons() {
             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
-        
-        <Button 
-          type="submit" 
-          disabled={loading} 
+
+        <Button
+          type="submit"
+          disabled={loading}
           className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white font-bold h-11 hover-lift active-press"
         >
           {loading ? (
@@ -124,7 +171,6 @@ export default function SignInButtons() {
           ? "Don't have an account? Sign up"
           : "Already have an account? Sign in"}
       </button>
-
     </div>
   );
 }

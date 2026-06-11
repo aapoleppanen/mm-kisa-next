@@ -6,6 +6,7 @@ import { format, isSameDay } from "date-fns";
 import useSWR from "swr";
 import { roundNumber } from "@/utils/numberUtils";
 import MatchCard from "./match-card";
+import ScoringExplainer, { type ScoringParams } from "./scoring-explainer";
 import type { PoolData } from "@/lib/pools";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -23,6 +24,7 @@ type Props = {
   backgroundUrl: string; // Deprecated, using CSS soccer pitch instead
   scoringMode: ScoringMode;
   lockLeadHours: number;
+  scoringParams: ScoringParams;
 };
 
 export default function MatchesClient({
@@ -30,9 +32,13 @@ export default function MatchesClient({
   initialCredits,
   scoringMode,
   lockLeadHours,
+  scoringParams,
 }: Props) {
   const [credits, setCredits] = useState(initialCredits);
   const isPariMutuel = scoringMode === "PARI_MUTUEL";
+  // Credits only matter in the betting modes.
+  const showCredits =
+    scoringMode === "FIXED_ODDS" || scoringMode === "COMPRESSED_ODDS" || scoringMode === "PARI_MUTUEL";
 
   const { data: poolsData } = useSWR<Record<string, PoolData>>(
     isPariMutuel ? "/api/pools" : null,
@@ -56,16 +62,18 @@ export default function MatchesClient({
 
   return (
     <div className="soccer-pitch-bg min-h-screen pt-4 sm:pt-6 pb-24">
-      {/* Credits badge - Premium scoreboard badge */}
-      <div className="fixed top-3 right-3 sm:top-20 sm:right-6 z-40 bg-white/95 backdrop-blur-md border border-amber-400 rounded-2xl px-3.5 py-1.5 shadow-lg flex items-center gap-2 hover-lift">
-        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-500 text-white font-black text-xs">
-          $
+      {/* Credits badge - Premium scoreboard badge (betting modes only) */}
+      {showCredits && (
+        <div className="fixed top-3 right-3 sm:top-20 sm:right-6 z-40 bg-white/95 backdrop-blur-md border border-amber-400 rounded-2xl px-3.5 py-1.5 shadow-lg flex items-center gap-2 hover-lift">
+          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-500 text-white font-black text-xs">
+            $
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] text-muted-foreground font-semibold uppercase leading-none">Credits</span>
+            <span className="text-sm font-black text-slate-800 leading-tight">{roundNumber(credits)}</span>
+          </div>
         </div>
-        <div className="flex flex-col">
-          <span className="text-[10px] text-muted-foreground font-semibold uppercase leading-none">Credits</span>
-          <span className="text-sm font-black text-slate-800 leading-tight">{roundNumber(credits)}</span>
-        </div>
-      </div>
+      )}
 
       {/* Lock warning */}
       <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-border/60 px-4 py-2.5 text-center shadow-sm">
@@ -74,6 +82,9 @@ export default function MatchesClient({
           <span>Predictions lock {lockLeadHours} hours before kickoff</span>
         </p>
       </div>
+
+      {/* How scoring works */}
+      <ScoringExplainer scoringMode={scoringMode} params={scoringParams} />
 
       {/* Match list */}
       <div className="flex flex-col items-center px-4 pt-6 pb-12 gap-5 max-w-xl mx-auto">

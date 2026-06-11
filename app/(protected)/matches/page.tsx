@@ -41,6 +41,14 @@ export default async function MatchesPage() {
       backgroundUrl="https://storage.googleapis.com/em-kisa-2024-bucket/background_6.jpg"
       scoringMode={cfg.scoringMode}
       lockLeadHours={cfg.lockLeadHours}
+      scoringParams={{
+        contrarianFactor: cfg.contrarianFactor,
+        exactScorePoints: cfg.exactScorePoints,
+        goalDiffPoints: cfg.goalDiffPoints,
+        tendencyPoints: cfg.tendencyPoints,
+        maxBetAmount: cfg.maxBetAmount,
+        startingCredits: cfg.startingCredits,
+      }}
     />
   );
 }

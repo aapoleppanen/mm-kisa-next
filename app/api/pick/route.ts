@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
   const { matchId, result, betAmount = 0, predHome, predAway, clear } = parsed.data;
   const userId = session.user.id;
   const isExactScore = cfg.scoringMode === "EXACT_SCORE";
+  const isContrarian = cfg.scoringMode === "CONTRARIAN";
 
   const match = await prisma.match.findUnique({
     where: { id: matchId },
@@ -106,6 +107,27 @@ export async function POST(request: NextRequest) {
       predAway,
       notification: "Prediction saved",
     });
+  }
+
+  if (isContrarian) {
+    // Outcome-only pick, no stake.
+    if (clear || !result || result === Result.NO_RESULT) {
+      try {
+        await prisma.pick.delete({ where: { userId_matchId: { userId, matchId } } });
+      } catch {}
+      return NextResponse.json({ remainingCredits: 0, betAmount: 0, notification: "Cleared pick" });
+    }
+
+    if (disabledToday(match.startTime, cfg.lockLeadHours)) {
+      return NextResponse.json({ error: "Too late" }, { status: 403 });
+    }
+
+    await prisma.pick.upsert({
+      where: { userId_matchId: { userId, matchId } },
+      create: { matchId, userId, pickedResult: result, betAmount: 0 },
+      update: { pickedResult: result, betAmount: 0 },
+    });
+    return NextResponse.json({ remainingCredits: 0, betAmount: 0, notification: "Pick saved" });
   }
 
   if (betAmount < 0 || betAmount > maxBet) {

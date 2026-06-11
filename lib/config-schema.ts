@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const ConfigUpdateSchema = z.object({
-  scoringMode: z.enum(["FIXED_ODDS", "COMPRESSED_ODDS", "PARI_MUTUEL", "EXACT_SCORE"]).optional(),
+  scoringMode: z.enum(["FIXED_ODDS", "COMPRESSED_ODDS", "PARI_MUTUEL", "EXACT_SCORE", "CONTRARIAN"]).optional(),
   startingCredits: z.number().positive().optional(),
   maxBetAmount: z.number().positive().optional(),
   lockLeadHours: z.number().int().min(0).optional(),
@@ -10,8 +10,10 @@ export const ConfigUpdateSchema = z.object({
   exactScorePoints: z.number().int().min(0).optional(),
   goalDiffPoints: z.number().int().min(0).optional(),
   tendencyPoints: z.number().int().min(0).optional(),
+  contrarianFactor: z.number().min(0).optional(),
   maintenanceMode: z.boolean().optional(),
   cronSecret: z.string().nullable().optional(),
+  mobilepayNumber: z.string().nullable().optional(),
   winnerBonusFactor: z.number().min(0).optional(),
   topScorerBonusFactor: z.number().min(0).optional(),
   actualWinnerTeamId: z.number().int().nullable().optional(),

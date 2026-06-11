@@ -81,7 +81,10 @@ export default function MatchCard({
   const latestRef = useRef({ currentPick, betAmount, predHome, predAway });
   const disabled = disabledToday(new Date(match.startTime), lockLeadHours);
   const isExactScore = scoringMode === "EXACT_SCORE";
+  const isContrarian = scoringMode === "CONTRARIAN";
   const isPariMutuel = scoringMode === "PARI_MUTUEL";
+  // Betting modes show a stake input + odds; the rest are pure prediction.
+  const isBetting = !isExactScore && !isContrarian;
   const hasScore = match.homeGoals != null && match.awayGoals != null;
 
   const poolMultiplier =
@@ -114,6 +117,23 @@ export default function MatchCard({
       return;
     }
 
+    if (isContrarian) {
+      if (!currentPick || currentPick === Result.NO_RESULT) return;
+      const response = await fetch("/api/pick", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ matchId: match.id, result: currentPick }),
+      });
+      if (response.status === 403) {
+        const { error } = await response.json();
+        toast.error(error);
+        return;
+      }
+      const data = await response.json();
+      toast.success(data.notification ?? "Pick saved!");
+      return;
+    }
+
     const ZBet = z.number().min(0).max(maxBetAmount);
     if (!ZBet.safeParse(Number(betAmount)).success || Number(betAmount) > maxBetAmount) {
       toast.error(`Invalid bet amount (max: ${maxBetAmount})`);
@@ -136,7 +156,7 @@ export default function MatchCard({
     updateUserCredits(remainingCredits);
     setBetAmount(newBet);
     toast.success(notification ?? "Bet placed!");
-  }, [match.id, updateUserCredits, maxBetAmount, isExactScore]);
+  }, [match.id, updateUserCredits, maxBetAmount, isExactScore, isContrarian]);
 
   const debouncedSave = useRef(debounce(makeApiCall, 600)).current;
 
@@ -203,12 +223,12 @@ export default function MatchCard({
         )}
         
         <span className="text-xs font-bold leading-tight text-center truncate max-w-full px-1">{label}</span>
-        
-        {!isExactScore && (
+
+        {isBetting && (
           <span className={cn(
             "text-[10px] font-bold px-2 py-0.5 rounded-full",
-            selected 
-              ? "bg-amber-400 text-slate-900" 
+            selected
+              ? "bg-amber-400 text-slate-900"
               : "text-primary bg-emerald-50 font-semibold"
           )}>
             {displayOdds(pickResult)}
@@ -326,6 +346,31 @@ export default function MatchCard({
                 Clear
               </Button>
             </div>
+          </div>
+        ) : isContrarian ? (
+          <div className="flex items-center justify-between gap-2 py-1 bg-slate-50 border border-slate-100 rounded-2xl p-2.5">
+            <span className="text-[11px] text-slate-500 px-1">
+              {currentPick && currentPick !== Result.NO_RESULT
+                ? "Pick saved — tap another to change"
+                : "Tap your prediction above"}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={disabled || !currentPick || currentPick === Result.NO_RESULT}
+              onClick={async () => {
+                setCurrentPick("");
+                const response = await fetch("/api/pick", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ matchId: match.id, clear: true }),
+                });
+                if (response.ok) toast.success("Cleared pick");
+              }}
+              className="h-8 text-[11px] font-semibold text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl px-2"
+            >
+              Clear
+            </Button>
           </div>
         ) : (
           <div className="flex items-center gap-2 py-1 bg-slate-50 border border-slate-100 rounded-2xl p-2.5">

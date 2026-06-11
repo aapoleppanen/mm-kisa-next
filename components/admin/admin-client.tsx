@@ -35,7 +35,7 @@ export default function AdminClient({
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [aliases, setAliases] = useState<TeamAlias[]>([]);
   const [health, setHealth] = useState<HealthData | null>(null);
-  const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; role?: string }>>([]);
+  const [users, setUsers] = useState<Array<{ id: string; name: string; email: string; role?: string; hasPaid?: boolean }>>([]);
   const [loading, setLoading] = useState(false);
   const [matchResults, setMatchResults] = useState<Record<number, { result: Result; homeGoals: string; awayGoals: string }>>({});
   const [newAlias, setNewAlias] = useState({ veikkausName: "", teamId: "" });
@@ -43,14 +43,15 @@ export default function AdminClient({
   const loadHealth = () =>
     fetch("/api/admin/health").then((r) => r.json()).then(setHealth).catch(() => {});
 
+  const loadUsers = () =>
+    fetch("/api/admin/users").then((r) => r.json()).then(setUsers).catch(() => {});
+
   useEffect(() => {
     fetch("/api/admin/config").then((r) => r.json()).then(setConfig);
     fetch("/api/admin/tournament").then((r) => r.json()).then((d) => setTournament(d.active));
     fetch("/api/admin/team-map").then((r) => r.json()).then(setAliases).catch(() => {});
     loadHealth();
-    authClient.admin.listUsers({ query: { limit: 50 } })
-      .then((res) => { if (res.data) setUsers(res.data.users); })
-      .catch(() => {});
+    loadUsers();
   }, []);
 
   const saveConfig = async () => {
@@ -167,8 +168,21 @@ export default function AdminClient({
   const setUserRole = async (userId: string, role: "user" | "admin") => {
     await authClient.admin.setRole({ userId, role });
     toast.success("Role updated");
-    const updated = await authClient.admin.listUsers({ query: { limit: 50 } });
-    if (updated.data) setUsers(updated.data.users);
+    loadUsers();
+  };
+
+  const togglePayment = async (userId: string, hasPaid: boolean) => {
+    const res = await fetch(`/api/admin/users/${userId}/payment`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hasPaid }),
+    });
+    if (res.ok) {
+      toast.success(hasPaid ? "Marked as paid" : "Marked as unpaid");
+      loadUsers();
+    } else {
+      toast.error("Failed to update payment status");
+    }
   };
 
   if (!config || !tournament) return <p className="p-8 text-center">Loading admin…</p>;
@@ -318,6 +332,7 @@ export default function AdminClient({
               <option value="COMPRESSED_ODDS">Compressed odds (log2)</option>
               <option value="PARI_MUTUEL">Pari-mutuel</option>
               <option value="EXACT_SCORE">Exact score</option>
+              <option value="CONTRARIAN">Contrarian (1 + k·(1−p))</option>
             </select>
           </label>
           <label className="text-sm">
@@ -351,6 +366,10 @@ export default function AdminClient({
               <Input type="number" value={config.goalDiffPoints} onChange={(e) => setConfig({ ...config, goalDiffPoints: Number(e.target.value) })} />
               <Input type="number" value={config.tendencyPoints} onChange={(e) => setConfig({ ...config, tendencyPoints: Number(e.target.value) })} />
             </div>
+          </label>
+          <label className="text-sm">
+            Contrarian factor (k)
+            <Input type="number" step="0.1" value={config.contrarianFactor} onChange={(e) => setConfig({ ...config, contrarianFactor: Number(e.target.value) })} />
           </label>
           <label className="text-sm">
             Winner / scorer bonus factor
@@ -396,6 +415,15 @@ export default function AdminClient({
               placeholder="Rotate cron auth"
               value={config.cronSecret ?? ""}
               onChange={(e) => setConfig({ ...config, cronSecret: e.target.value || null })}
+            />
+          </label>
+          <label className="text-sm">
+            MobilePay number (shown on sign-up)
+            <Input
+              type="text"
+              placeholder="e.g. 12345"
+              value={config.mobilepayNumber ?? ""}
+              onChange={(e) => setConfig({ ...config, mobilepayNumber: e.target.value || null })}
             />
           </label>
         </div>
@@ -492,11 +520,25 @@ export default function AdminClient({
 
       <section className="space-y-3">
         <h2 className="font-semibold text-lg">Users</h2>
+        <p className="text-xs text-muted-foreground">
+          {users.filter((u) => u.hasPaid).length} / {users.length} paid
+        </p>
         <div className="space-y-1">
           {users.map((u) => (
-            <div key={u.id} className="flex items-center justify-between text-sm border rounded-lg p-2">
-              <span>{u.name} ({u.email})</span>
-              <div className="flex gap-1">
+            <div key={u.id} className="flex items-center justify-between text-sm border rounded-lg p-2 gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className={`w-2 h-2 rounded-full shrink-0 ${u.hasPaid ? "bg-green-500" : "bg-red-400"}`} />
+                <span className="truncate">{u.name} <span className="text-muted-foreground">({u.email})</span></span>
+              </div>
+              <div className="flex gap-1 shrink-0">
+                <Button
+                  size="sm"
+                  variant={u.hasPaid ? "default" : "outline"}
+                  className={u.hasPaid ? "bg-green-600 hover:bg-green-700" : ""}
+                  onClick={() => togglePayment(u.id, !u.hasPaid)}
+                >
+                  {u.hasPaid ? "Paid ✓" : "Unpaid"}
+                </Button>
                 <Button size="sm" variant={u.role === "admin" ? "default" : "outline"} onClick={() => setUserRole(u.id, "admin")}>
                   Admin
                 </Button>

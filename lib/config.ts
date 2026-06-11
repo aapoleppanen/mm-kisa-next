@@ -14,6 +14,7 @@ const DEFAULT_CONFIG = {
   exactScorePoints: 3,
   goalDiffPoints: 2,
   tendencyPoints: 1,
+  contrarianFactor: 1,
   maintenanceMode: false,
   cronSecret: null,
   winnerBonusFactor: 10,
@@ -21,6 +22,7 @@ const DEFAULT_CONFIG = {
   actualWinnerTeamId: null,
   actualTopScorerId: null,
   lastCronRunAt: null,
+  mobilepayNumber: null,
   updatedAt: new Date(),
 };
 

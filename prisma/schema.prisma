@@ -14,6 +14,7 @@ enum ScoringMode {
   COMPRESSED_ODDS
   PARI_MUTUEL
   EXACT_SCORE
+  CONTRARIAN
 }
 
 enum Stage {
@@ -35,6 +36,7 @@ model Config {
   exactScorePoints     Int         @default(3)
   goalDiffPoints       Int         @default(2)
   tendencyPoints       Int         @default(1)
+  contrarianFactor     Float       @default(1) @db.Real
   maintenanceMode      Boolean     @default(false)
   cronSecret           String?
   winnerBonusFactor    Float       @default(10) @db.Real
@@ -42,6 +44,7 @@ model Config {
   actualWinnerTeamId   Int?
   actualTopScorerId    Int?
   lastCronRunAt        DateTime?
+  mobilepayNumber      String?
   updatedAt            DateTime    @updatedAt
 }
 
@@ -186,6 +189,7 @@ model User {
   banned           Boolean?
   banReason        String?
   banExpires       DateTime?
+  hasPaid          Boolean   @default(false)
 
   @@index([id])
   @@index([points])
