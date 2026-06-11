@@ -6,7 +6,8 @@ import prisma from "@/lib/prisma";
 
 const UpdateProfileSchema = z.object({
   newName: z.string().min(1).max(100).optional(),
-  avatar_url: z.string().url().nullable().optional(),
+  // R2 object key (e.g. "avatars/xxx.png") or an absolute URL — resolved via storageUrl().
+  avatar_url: z.string().max(500).nullable().optional(),
 });
 
 export async function POST(request: NextRequest) {

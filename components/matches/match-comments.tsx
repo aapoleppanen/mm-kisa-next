@@ -2,7 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
-import { ImageIcon, Loader2, MoreHorizontal, Plus, Send, X } from "lucide-react";
+import {
+  UploadIcon,
+  Loader2,
+  MoreHorizontal,
+  Plus,
+  Send,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -12,7 +19,7 @@ import GifPickerPopover from "./gif-picker";
 import { storageUrl } from "@/utils/imageUtils";
 import { cn } from "@/lib/utils";
 
-const REACTIONS = ["⚽", "👍", "😂", "🔥"];
+const REACTIONS = ["⚽", "👍", "😂", "🔥", "❤️", "😮", "🎉", "😢"];
 
 type ReactionGroup = { emoji: string; count: number; userReacted: boolean };
 type CommentUser = { id: string; name: string | null; image: string | null };
@@ -25,7 +32,11 @@ type Comment = {
   reactions: ReactionGroup[];
 };
 
-function applyReactionToggle(comments: Comment[], commentId: string, emoji: string): Comment[] {
+function applyReactionToggle(
+  comments: Comment[],
+  commentId: string,
+  emoji: string,
+): Comment[] {
   return comments.map((c) => {
     if (c.id !== commentId) return c;
     const existing = c.reactions.find((r) => r.emoji === emoji);
@@ -34,7 +45,9 @@ function applyReactionToggle(comments: Comment[], commentId: string, emoji: stri
         ...c,
         reactions: c.reactions
           .map((r) =>
-            r.emoji === emoji ? { ...r, count: r.count - 1, userReacted: false } : r
+            r.emoji === emoji
+              ? { ...r, count: r.count - 1, userReacted: false }
+              : r,
           )
           .filter((r) => r.count > 0),
       };
@@ -43,11 +56,16 @@ function applyReactionToggle(comments: Comment[], commentId: string, emoji: stri
       return {
         ...c,
         reactions: c.reactions.map((r) =>
-          r.emoji === emoji ? { ...r, count: r.count + 1, userReacted: true } : r
+          r.emoji === emoji
+            ? { ...r, count: r.count + 1, userReacted: true }
+            : r,
         ),
       };
     }
-    return { ...c, reactions: [...c.reactions, { emoji, count: 1, userReacted: true }] };
+    return {
+      ...c,
+      reactions: [...c.reactions, { emoji, count: 1, userReacted: true }],
+    };
   });
 }
 
@@ -64,7 +82,8 @@ function EmojiPickerPopover({
   useEffect(() => {
     if (!open) return;
     function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -81,7 +100,7 @@ function EmojiPickerPopover({
           "size-6 rounded-full border flex items-center justify-center transition-colors duration-150",
           open
             ? "bg-primary/10 border-primary/30 text-primary"
-            : "border-border/80 bg-white text-muted-foreground hover:text-foreground hover:border-border"
+            : "border-border/80 bg-white text-muted-foreground hover:text-foreground hover:border-border",
         )}
       >
         <Plus className="size-3" strokeWidth={2} />
@@ -92,7 +111,10 @@ function EmojiPickerPopover({
             <button
               key={emoji}
               type="button"
-              onClick={() => { onReact(commentId, emoji); setOpen(false); }}
+              onClick={() => {
+                onReact(commentId, emoji);
+                setOpen(false);
+              }}
               className="size-8 rounded-lg text-base hover:bg-muted transition-colors duration-150"
             >
               {emoji}
@@ -111,7 +133,8 @@ function CommentMenu({ onDelete }: { onDelete: () => void }) {
   useEffect(() => {
     if (!open) return;
     function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -132,7 +155,10 @@ function CommentMenu({ onDelete }: { onDelete: () => void }) {
         <div className="absolute right-0 top-full mt-1 z-30 min-w-28 bg-white border border-border/80 rounded-lg shadow-md py-1">
           <button
             type="button"
-            onClick={() => { onDelete(); setOpen(false); }}
+            onClick={() => {
+              onDelete();
+              setOpen(false);
+            }}
             className="w-full px-3 py-1.5 text-left text-xs text-destructive hover:bg-destructive/5 transition-colors duration-150"
           >
             Delete
@@ -168,7 +194,9 @@ function CommentItem({
       </Avatar>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-foreground">{comment.user.name}</span>
+          <span className="text-xs font-medium text-foreground">
+            {comment.user.name}
+          </span>
           <span className="text-[10px] text-muted-foreground tabular-nums">
             {format(new Date(comment.createdAt), "d.M. HH:mm")}
           </span>
@@ -187,7 +215,9 @@ function CommentItem({
               src={comment.gifUrl}
               alt=""
               className="max-h-32 max-w-full object-contain"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
             />
           </div>
         )}
@@ -201,11 +231,13 @@ function CommentItem({
                 "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-colors duration-150",
                 r.userReacted
                   ? "bg-primary/10 border-primary/25 text-primary"
-                  : "bg-muted/50 border-transparent text-muted-foreground hover:bg-muted"
+                  : "bg-muted/50 border-transparent text-muted-foreground hover:bg-muted",
               )}
             >
               <span>{r.emoji}</span>
-              <span className="tabular-nums text-[10px] font-medium">{r.count}</span>
+              <span className="tabular-nums text-[10px] font-medium">
+                {r.count}
+              </span>
             </button>
           ))}
           <EmojiPickerPopover commentId={comment.id} onReact={onReact} />
@@ -252,7 +284,12 @@ export default function MatchComments({
       const presignRes = await fetch("/api/upload/presign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: file.name, contentType: file.type, size: file.size, folder: "comments" }),
+        body: JSON.stringify({
+          filename: file.name,
+          contentType: file.type,
+          size: file.size,
+          folder: "comments",
+        }),
       });
       if (!presignRes.ok) {
         const { error } = await presignRes.json();
@@ -260,8 +297,15 @@ export default function MatchComments({
         return;
       }
       const { uploadUrl, key } = await presignRes.json();
-      const uploadRes = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
-      if (!uploadRes.ok) { toast.error("Upload failed"); return; }
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!uploadRes.ok) {
+        toast.error("Upload failed");
+        return;
+      }
       setImageKey(key);
       setImagePreview(URL.createObjectURL(file));
       setGifUrl(null);
@@ -271,7 +315,10 @@ export default function MatchComments({
     }
   };
 
-  const clearImage = () => { setImageKey(null); setImagePreview(null); };
+  const clearImage = () => {
+    setImageKey(null);
+    setImagePreview(null);
+  };
 
   const handlePost = async () => {
     if (!text.trim() && !gifUrl && !imageKey) return;
@@ -279,10 +326,16 @@ export default function MatchComments({
     const res = await fetch(`/api/comments/${matchId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: text.trim(), gifUrl: gifUrl ?? (imageKey ? storageUrl(imageKey) : null) }),
+      body: JSON.stringify({
+        content: text.trim(),
+        gifUrl: gifUrl ?? (imageKey ? storageUrl(imageKey) : null),
+      }),
     });
     setPosting(false);
-    if (!res.ok) { toast.error("Couldn't post comment"); return; }
+    if (!res.ok) {
+      toast.error("Couldn't post comment");
+      return;
+    }
     const { comment } = await res.json();
     setComments((prev) => [...prev, comment]);
     setText("");
@@ -305,7 +358,10 @@ export default function MatchComments({
   };
 
   const handleReaction = async (commentId: string, emoji: string) => {
-    if (!session) { toast.error("Sign in to react"); return; }
+    if (!session) {
+      toast.error("Sign in to react");
+      return;
+    }
 
     const prev = comments;
     setComments((c) => applyReactionToggle(c, commentId, emoji));
@@ -347,11 +403,18 @@ export default function MatchComments({
         <div className="border-t border-border/50 p-3 space-y-2">
           {(gifUrl || imagePreview) && (
             <div className="relative inline-block rounded-lg overflow-hidden border border-border/60">
-              <img src={imagePreview ?? gifUrl!} alt="" className="max-h-20 object-contain bg-muted/30" />
+              <img
+                src={imagePreview ?? gifUrl!}
+                alt=""
+                className="max-h-20 object-contain bg-muted/30"
+              />
               <button
                 type="button"
                 aria-label="Remove image"
-                onClick={() => { setGifUrl(null); clearImage(); }}
+                onClick={() => {
+                  setGifUrl(null);
+                  clearImage();
+                }}
                 className="absolute top-1 right-1 size-5 rounded-full bg-foreground/70 hover:bg-destructive text-white flex items-center justify-center transition-colors duration-150"
               >
                 <X className="size-3" strokeWidth={2.5} />
@@ -392,12 +455,23 @@ export default function MatchComments({
                   imageKey
                     ? "bg-primary/10 border-primary/30 text-primary"
                     : "border-border/80 bg-white text-muted-foreground hover:text-foreground hover:border-border",
-                  (uploading || Boolean(gifUrl)) && "opacity-40 cursor-not-allowed"
+                  (uploading || Boolean(gifUrl)) &&
+                    "opacity-40 cursor-not-allowed",
                 )}
               >
-                {uploading ? <Loader2 className="size-4 animate-spin" /> : <ImageIcon className="size-4" strokeWidth={1.75} />}
+                {uploading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <UploadIcon className="size-4" strokeWidth={1.75} />
+                )}
               </button>
-              <GifPickerPopover onSelect={(url) => { setGifUrl(url); clearImage(); }} active={Boolean(gifUrl)} />
+              <GifPickerPopover
+                onSelect={(url) => {
+                  setGifUrl(url);
+                  clearImage();
+                }}
+                active={Boolean(gifUrl)}
+              />
               <Button
                 size="icon"
                 aria-label="Post comment"
