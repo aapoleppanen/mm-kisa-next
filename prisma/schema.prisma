@@ -125,7 +125,7 @@ model Pick {
   matchId       Int
   match         Match   @relation(name: "matchPicks", fields: [matchId], references: [id])
   userId        String
-  user          User    @relation(name: "userPicks", fields: [userId], references: [id])
+  user          User    @relation(name: "userPicks", fields: [userId], references: [id], onDelete: Cascade)
   pickedResult  Result?
   betAmount     Float   @default(0) @db.Real
   predHome      Int?

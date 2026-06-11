@@ -13,6 +13,7 @@ const PresignSchema = z.object({
     message: "Only JPEG, PNG, WebP, and GIF are allowed",
   }),
   size: z.number().max(MAX_SIZE_BYTES),
+  folder: z.enum(["avatars", "comments"]).default("avatars"),
 });
 
 export async function POST(request: NextRequest) {
@@ -27,9 +28,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
 
-  const { filename, contentType } = parsed.data;
+  const { filename, contentType, folder } = parsed.data;
   const ext = filename.split(".").pop() ?? "jpg";
-  const key = `avatars/${session.user.id}-${Date.now()}.${ext}`;
+  const key = `${folder}/${session.user.id}-${Date.now()}.${ext}`;
 
   const uploadUrl = await getUploadUrl(key, contentType);
 

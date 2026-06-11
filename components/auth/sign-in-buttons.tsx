@@ -72,16 +72,13 @@ export default function SignInButtons() {
     return (
       <div className="flex flex-col items-center gap-4 w-full max-w-sm text-center">
         <div className="text-4xl">💸</div>
-        <h3 className="text-lg font-bold text-slate-800">Remember to pay!</h3>
-        <p className="text-sm text-slate-600">
-          Send your entry fee via MobilePay to:
-        </p>
+        <h3 className="text-lg font-bold text-slate-800">Osallistumismaksu</h3>
+        <p className="text-sm text-slate-600">Mobilepay:</p>
         <div className="bg-primary/10 border border-primary/30 rounded-2xl px-6 py-3">
-          <span className="text-2xl font-black text-primary tracking-widest">{mobilepayNumber}</span>
+          <span className="text-2xl font-black text-primary tracking-widest">
+            {mobilepayNumber}
+          </span>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Your account is created. You can start playing right away — payment is tracked separately by the admin.
-        </p>
         <Button
           className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white font-bold h-11 hover-lift active-press"
           onClick={() => {
@@ -89,7 +86,7 @@ export default function SignInButtons() {
             router.refresh();
           }}
         >
-          Got it, let&apos;s play!
+          Päästä mut sisään
         </Button>
       </div>
     );
@@ -97,14 +94,14 @@ export default function SignInButtons() {
 
   return (
     <div className="flex flex-col gap-4 w-full max-w-sm">
-      {mode === "signup" && mobilepayNumber && (
+      {/* {mode === "signup" && mobilepayNumber && (
         <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-800">
           <span className="text-base leading-none mt-0.5">💳</span>
           <span>
             Entry fee via MobilePay to <strong>{mobilepayNumber}</strong> — you&apos;ll be reminded after sign-up.
           </span>
-        </div>
-      )}
+        </div> */}
+      {/* )} */}
 
       <form onSubmit={handleEmailAuth} className="flex flex-col gap-3">
         {mode === "signup" && (
@@ -134,7 +131,9 @@ export default function SignInButtons() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            autoComplete={mode === "signup" ? "new-password" : "current-password"}
+            autoComplete={
+              mode === "signup" ? "new-password" : "current-password"
+            }
             className="pr-10 rounded-xl border-border/80 focus-visible:ring-primary/20 focus-visible:border-primary transition-all duration-200"
           />
           <button

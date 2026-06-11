@@ -43,7 +43,8 @@ export default function PaymentReminder({
           <span className="flex-1 text-xs font-semibold text-slate-700 leading-snug">
             How to pay
             <span className="hidden sm:inline text-slate-400 font-normal">
-              {" "}— MobilePay {mobilepayNumber}
+              {" "}
+              — MobilePay {mobilepayNumber}
             </span>
           </span>
           {hasPaid && (
@@ -51,7 +52,12 @@ export default function PaymentReminder({
               Paid ✓
             </span>
           )}
-          <span className={cn("text-[10px] text-slate-400 transition-transform duration-150", open && "rotate-180")}>
+          <span
+            className={cn(
+              "text-[10px] text-slate-400 transition-transform duration-150",
+              open && "rotate-180",
+            )}
+          >
             ▼
           </span>
         </button>
@@ -61,16 +67,25 @@ export default function PaymentReminder({
               <li className="text-xs text-slate-600 flex gap-1.5">
                 <span className="text-primary mt-0.5">•</span>
                 <span>
-                  Send your entry fee via <strong>MobilePay</strong> to{" "}
-                  <span className="font-black text-primary">{mobilepayNumber}</span>
+                  <strong>MobilePay</strong>{" "}
+                  <span className="font-black text-primary">
+                    {mobilepayNumber}
+                  </span>
                 </span>
               </li>
               <li className="text-xs text-slate-600 flex gap-1.5">
                 <span className="text-primary mt-0.5">•</span>
-                <span>Include your name in the message so the admin can confirm.</span>
+                <span>
+                  Add your name and <strong>username</strong> to the message.
+                </span>
               </li>
             </ul>
-            <label className={cn("flex items-center gap-2.5 cursor-pointer select-none", saving && "opacity-50")}>
+            <label
+              className={cn(
+                "flex items-center gap-2.5 cursor-pointer select-none",
+                saving && "opacity-50",
+              )}
+            >
               <input
                 type="checkbox"
                 checked={hasPaid}

@@ -13,11 +13,15 @@ export type ScoringParams = {
   startingCredits: number;
 };
 
-function content(mode: ScoringMode, p: ScoringParams): { summary: string; points: string[] } {
+function content(
+  mode: ScoringMode,
+  p: ScoringParams,
+): { summary: string; points: string[] } {
   switch (mode) {
     case "CONTRARIAN":
       return {
-        summary: "Pick each match winner — you score more for results few others called.",
+        summary:
+          "Pick each match winner — you score more for results few others called.",
         points: [
           `A correct pick scores 1 + ${p.contrarianFactor} × (1 − p), where p is the share of players who picked the same result.`,
           `Everyone backs the favourite → about 1 point. You nail an upset almost nobody saw → up to ${(1 + p.contrarianFactor).toFixed(1)} points.`,
@@ -30,12 +34,14 @@ function content(mode: ScoringMode, p: ScoringParams): { summary: string; points
         points: [
           `Exact score: ${p.exactScorePoints} pts.`,
           `Right goal difference (wrong score): ${p.goalDiffPoints} pts.`,
-          `Right winner only: ${p.tendencyPoints} pt. Wrong: 0.`,
+          `Right winner only: ${p.tendencyPoints} pt.`,
+          `Wrong: 0 pts.`,
         ],
       };
     case "PARI_MUTUEL":
       return {
-        summary: "Bet credits on outcomes — the winning side splits the whole pot.",
+        summary:
+          "Bet credits on outcomes — the winning side splits the whole pot.",
         points: [
           `You start with ${p.startingCredits} credits, max ${p.maxBetAmount} per match.`,
           "Payout = your stake × (total pot ÷ stakes on your outcome).",
@@ -44,7 +50,8 @@ function content(mode: ScoringMode, p: ScoringParams): { summary: string; points
       };
     case "COMPRESSED_ODDS":
       return {
-        summary: "Bet credits at fixed odds, compressed so longshots don't dominate.",
+        summary:
+          "Bet credits at fixed odds, compressed so longshots don't dominate.",
         points: [
           `You start with ${p.startingCredits} credits, max ${p.maxBetAmount} per match.`,
           "A correct bet pays stake × log2(odds); favourites and underdogs end up closer in value.",
@@ -82,9 +89,17 @@ export default function ScoringExplainer({
           <span className="text-base leading-none">💡</span>
           <span className="flex-1 text-xs font-semibold text-slate-700 leading-snug">
             How scoring works
-            <span className="hidden sm:inline text-slate-400 font-normal"> — {summary}</span>
+            <span className="hidden sm:inline text-slate-400 font-normal">
+              {" "}
+              — {summary}
+            </span>
           </span>
-          <span className={cn("text-[10px] text-slate-400 transition-transform duration-150", open && "rotate-180")}>
+          <span
+            className={cn(
+              "text-[10px] text-slate-400 transition-transform duration-150",
+              open && "rotate-180",
+            )}
+          >
             ▼
           </span>
         </button>

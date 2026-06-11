@@ -8,7 +8,12 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
 
   const { id } = await params;
 
-  await prisma.user.delete({ where: { id } });
+  // Picks don't cascade on their FK, so remove them first; comments / reactions /
+  // sessions / accounts already cascade on user delete.
+  await prisma.$transaction([
+    prisma.pick.deleteMany({ where: { userId: id } }),
+    prisma.user.delete({ where: { id } }),
+  ]);
 
   return NextResponse.json({ ok: true });
 }

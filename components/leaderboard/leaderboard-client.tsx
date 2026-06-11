@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { ScoringMode } from "@prisma/client";
 import { LeaderBoardUser } from "@/app/(protected)/leaderboard/page";
 import { cloudStorageLoader } from "@/utils/imageUtils";
 import { roundNumber } from "@/utils/numberUtils";
@@ -10,7 +11,13 @@ import UserPicksOverview from "./user-picks-overview";
 import { Loader2, ChevronDown, ChevronUp, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export default function LeaderboardClient({ users }: { users: LeaderBoardUser[] }) {
+export default function LeaderboardClient({
+  users,
+  scoringMode,
+}: {
+  users: LeaderBoardUser[];
+  scoringMode: ScoringMode;
+}) {
   const [selected, setSelected] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [picks, setPicks] = useState<any>(null);
@@ -122,7 +129,7 @@ export default function LeaderboardClient({ users }: { users: LeaderBoardUser[] 
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Separator className="bg-border/30" />
-                  <UserPicksOverview picks={picks} user={user} />
+                  <UserPicksOverview picks={picks} user={user} scoringMode={scoringMode} />
                 </div>
               )}
             </div>

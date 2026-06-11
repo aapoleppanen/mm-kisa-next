@@ -1,6 +1,6 @@
 "use client";
 
-import { Match, Pick, Player, Result, Team, User } from "@prisma/client";
+import { Match, Pick, Player, Result, ScoringMode, Team, User } from "@prisma/client";
 import { LeaderBoardUser } from "@/app/(protected)/leaderboard/page";
 import { roundNumber } from "@/utils/numberUtils";
 import { Separator } from "@/components/ui/separator";
@@ -23,15 +23,28 @@ function getPotentialWin(bet: number, pick: Result | null, match: Match) {
   return (bet * match[key]) / 100;
 }
 
-export default function UserPicksOverview({ picks, user }: { picks: FullUser; user: LeaderBoardUser }) {
+export default function UserPicksOverview({
+  picks,
+  user,
+  scoringMode,
+}: {
+  picks: FullUser;
+  user: LeaderBoardUser;
+  scoringMode: ScoringMode;
+}) {
+  // Credits only exist in the betting modes.
+  const showCredits =
+    scoringMode === "FIXED_ODDS" || scoringMode === "COMPRESSED_ODDS" || scoringMode === "PARI_MUTUEL";
   return (
     <div className="px-4 py-4 space-y-4 bg-slate-50/30">
       {/* Stats summary boxes */}
-      <div className="grid grid-cols-2 gap-3 text-center">
-        <div className="bg-white border border-slate-100 rounded-xl py-2 px-3 shadow-sm flex flex-col items-center">
-          <span className="text-lg font-black text-slate-800 font-mono">{roundNumber(user.remainingcredits)}</span>
-          <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">Credits left</span>
-        </div>
+      <div className={cn("grid gap-3 text-center", showCredits ? "grid-cols-2" : "grid-cols-1")}>
+        {showCredits && (
+          <div className="bg-white border border-slate-100 rounded-xl py-2 px-3 shadow-sm flex flex-col items-center">
+            <span className="text-lg font-black text-slate-800 font-mono">{roundNumber(user.remainingcredits)}</span>
+            <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">Credits left</span>
+          </div>
+        )}
         <div className="bg-white border border-slate-100 rounded-xl py-2 px-3 shadow-sm flex flex-col items-center">
           <span className="text-lg font-black text-primary font-mono">{roundNumber(user.points)}</span>
           <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">Total Points</span>

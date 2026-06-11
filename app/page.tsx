@@ -32,17 +32,11 @@ export default async function HomePage() {
           <h1 className="text-3xl font-black text-primary uppercase tracking-wider text-center drop-shadow-sm leading-none mt-2">
             {"MM-Kisa '26"}
           </h1>
-          <p className="text-xs text-muted-foreground font-semibold uppercase tracking-widest text-center mt-1">
-            World Cup Prediction League
-          </p>
         </div>
-        
+
         <div className="w-full h-px bg-border/40" />
-        
+
         <div className="w-full flex flex-col items-center">
-          <h2 className="text-lg font-bold text-slate-800 mb-4 text-center">
-            Sign in to your team
-          </h2>
           <SignInButtons />
         </div>
       </div>
