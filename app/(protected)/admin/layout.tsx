@@ -1,9 +1,8 @@
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { getSession } from "@/lib/session";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getSession();
   const role = (session?.user as { role?: string } | undefined)?.role;
 
   if (!session || role !== "admin") {

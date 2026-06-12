@@ -1,13 +1,12 @@
-import { headers } from "next/headers";
-import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { getConfig, maxBetForStage } from "@/lib/config";
+import { getSession } from "@/lib/session";
 import MatchesClient from "@/components/matches/matches-client";
 
 export const dynamic = "force-dynamic";
 
 export default async function MatchesPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getSession();
   const userId = session!.user.id;
   const cfg = await getConfig();
 

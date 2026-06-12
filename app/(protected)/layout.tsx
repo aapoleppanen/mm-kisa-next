@@ -1,13 +1,12 @@
-import { headers } from "next/headers";
-import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getConfig } from "@/lib/config";
+import { getSession } from "@/lib/session";
 import Header from "@/components/layout/header";
 import BottomNav from "@/components/layout/bottom-nav";
 import MaintenanceBanner from "@/components/layout/maintenance-banner";
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getSession();
 
   if (!session) redirect("/sign-in");
 

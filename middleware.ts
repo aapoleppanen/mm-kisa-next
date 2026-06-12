@@ -1,10 +1,9 @@
-import { betterFetch } from "@better-fetch/fetch";
-import type { Session } from "better-auth/types";
+import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
 
 const PROTECTED_PATHS = ["/matches", "/leaderboard", "/winner", "/top-scorer", "/profile", "/admin"];
 
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isProtected = PROTECTED_PATHS.some(
@@ -13,12 +12,13 @@ export async function middleware(request: NextRequest) {
 
   if (!isProtected) return NextResponse.next();
 
-  const { data: session } = await betterFetch<Session>("/api/auth/get-session", {
-    baseURL: request.nextUrl.origin,
-    headers: { cookie: request.headers.get("cookie") ?? "" },
-  });
+  // Optimistic, local cookie check only — NO network/DB call. The (protected)
+  // layout does the authoritative session validation + redirect. The previous
+  // betterFetch("/api/auth/get-session") added a full ~1.5s serverless round-trip
+  // to every navigation.
+  const sessionCookie = getSessionCookie(request);
 
-  if (!session) {
+  if (!sessionCookie) {
     const signInUrl = new URL("/sign-in", request.url);
     signInUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(signInUrl);

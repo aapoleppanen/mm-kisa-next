@@ -39,6 +39,11 @@ export default function AdminClient({
   const [loading, setLoading] = useState(false);
   const [matchResults, setMatchResults] = useState<Record<number, { result: Result; homeGoals: string; awayGoals: string }>>({});
   const [newAlias, setNewAlias] = useState({ veikkausName: "", teamId: "" });
+  const [dupTeams, setDupTeams] = useState<{
+    orphans: { id: number; name: string; suggestedIntoId: number | null; suggestedIntoName: string | null }[];
+    canonical: { id: number; name: string }[];
+  } | null>(null);
+  const [mergeTargets, setMergeTargets] = useState<Record<number, number>>({});
 
   const loadHealth = () =>
     fetch("/api/admin/health").then((r) => r.json()).then(setHealth).catch(() => {});
@@ -46,13 +51,38 @@ export default function AdminClient({
   const loadUsers = () =>
     fetch("/api/admin/users").then((r) => r.json()).then(setUsers).catch(() => {});
 
+  const loadDupTeams = () =>
+    fetch("/api/admin/duplicate-teams").then((r) => r.json()).then(setDupTeams).catch(() => {});
+
   useEffect(() => {
     fetch("/api/admin/config").then((r) => r.json()).then(setConfig);
     fetch("/api/admin/tournament").then((r) => r.json()).then((d) => setTournament(d.active));
     fetch("/api/admin/team-map").then((r) => r.json()).then(setAliases).catch(() => {});
     loadHealth();
     loadUsers();
+    loadDupTeams();
   }, []);
+
+  const mergeTeam = async (fromTeamId: number, intoTeamId: number | undefined) => {
+    if (!intoTeamId) {
+      toast.error("Pick a team to merge into");
+      return;
+    }
+    setLoading(true);
+    const res = await fetch("/api/admin/merge-team", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fromTeamId, intoTeamId }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (res.ok) {
+      toast.success(`Merged ${data.merged.from} → ${data.merged.into} (${data.matchesRepointed} matches). Now run Dedupe matches.`);
+      loadDupTeams();
+    } else {
+      toast.error(data.error ?? "Merge failed");
+    }
+  };
 
   const saveConfig = async () => {
     if (!config) return;
@@ -329,6 +359,42 @@ export default function AdminClient({
             Dedupe matches
           </Button>
         </div>
+
+        {dupTeams && dupTeams.orphans.length > 0 && (
+          <div className="border rounded-lg p-3 bg-amber-50/50 space-y-2">
+            <p className="text-sm font-semibold">
+              Duplicate / unmatched teams ({dupTeams.orphans.length})
+            </p>
+            <p className="text-xs text-muted-foreground">
+              These teams aren&apos;t used by any ESPN match (likely a name mismatch, e.g. Turkey vs
+              Türkiye). Merge each into its ESPN equivalent, then run “Dedupe matches”.
+            </p>
+            {dupTeams.orphans.map((o) => (
+              <div key={o.id} className="flex items-center gap-2 text-sm flex-wrap">
+                <span className="font-medium min-w-[120px]">{o.name} <span className="text-muted-foreground">#{o.id}</span></span>
+                <span className="text-muted-foreground">→</span>
+                <select
+                  className="border rounded-md px-2 py-1 text-sm"
+                  value={mergeTargets[o.id] ?? o.suggestedIntoId ?? ""}
+                  onChange={(e) => setMergeTargets({ ...mergeTargets, [o.id]: Number(e.target.value) })}
+                >
+                  <option value="">Merge into…</option>
+                  {dupTeams.canonical.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name} #{c.id}</option>
+                  ))}
+                </select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={loading}
+                  onClick={() => mergeTeam(o.id, mergeTargets[o.id] ?? o.suggestedIntoId ?? undefined)}
+                >
+                  Merge
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <Separator />

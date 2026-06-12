@@ -1,8 +1,7 @@
-import { headers } from "next/headers";
-import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { getSession } from "@/lib/session";
 import { cloudStorageLoader } from "@/utils/imageUtils";
 import { roundNumber } from "@/utils/numberUtils";
 import { Trophy, Settings, Star, Coins } from "lucide-react";
@@ -10,7 +9,7 @@ import { Trophy, Settings, Star, Coins } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getSession();
   const user = await prisma.user.findUnique({
     where: { email: session!.user.email },
     include: {
