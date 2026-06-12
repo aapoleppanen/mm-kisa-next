@@ -1,0 +1,13 @@
+name = "mm-kisa-cron"
+main = "src/index.ts"
+compatibility_date = "2026-06-01"
+
+# Pings the app's /api/cron every 30 minutes to fetch finished-match scores and
+# recompute points. Adjust the schedule as you like (cron syntax, UTC).
+[triggers]
+crons = ["*/30 * * * *"]
+
+# Public, non-secret config. CRON_SECRET is set separately via:
+#   wrangler secret put CRON_SECRET
+[vars]
+CRON_URL = "https://em-kisa.vercel.app/api/cron"

@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
       awayId: parsed.data.awayId,
       startTime: new Date(parsed.data.startTime),
       stage: parsed.data.stage,
+      source: "MANUAL",
     },
     include: { home: true, away: true },
   });

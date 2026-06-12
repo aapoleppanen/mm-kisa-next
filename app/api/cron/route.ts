@@ -1,9 +1,5 @@
-import { getConfig, isPrePicksLocked } from "@/lib/config";
+import { getConfig } from "@/lib/config";
 import prisma from "@/lib/prisma";
-import { getActiveTournament } from "@/lib/tournament";
-import { updateMatchOdds } from "@/modules/api/odds/updateMatchOdds";
-import { updatePlayerOdds } from "@/modules/api/odds/updatePlayerOdds";
-import { updateTeamOdds } from "@/modules/api/odds/updateTeamOdds";
 import { fetchResults } from "@/modules/api/results/fetchResults";
 import { settleAll } from "@/modules/api/scoring/settle";
 import { revalidatePath } from "next/cache";
@@ -20,33 +16,15 @@ async function verifyCronAuth(request: Request): Promise<boolean> {
   return auth === `Bearer ${secret}`;
 }
 
+// Pull finished-match scores and recompute points. Idempotent (full recompute),
+// so it's safe to run on a frequent schedule. Odds are NOT touched here — refresh
+// tournament-winner / top-scorer odds manually from the admin panel when needed.
 export async function GET(request: Request) {
   if (!(await verifyCronAuth(request))) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const cfg = await getConfig();
-  const tournament = await getActiveTournament();
-  const prePicksLocked = await isPrePicksLocked(cfg.prePicksLockAt);
-  const useVeikkausOdds = tournament.fixtureSource === "VEIKKAUS";
-
-  if (!prePicksLocked) {
-    const odds = useVeikkausOdds
-      ? await Promise.all([updateTeamOdds(), updatePlayerOdds(), updateMatchOdds()])
-      : null;
-    await prisma.config.update({
-      where: { id: 1 },
-      data: { lastCronRunAt: new Date() },
-    });
-    if (useVeikkausOdds) {
-      const [team, player, match] = odds!;
-      return Response.json({ team, player, match });
-    }
-    return Response.json({ oddsSkipped: true });
-  }
-
   const results = await fetchResults();
-  const matchOdds = useVeikkausOdds ? await updateMatchOdds() : null;
   await settleAll();
   await prisma.config.update({
     where: { id: 1 },
@@ -54,5 +32,5 @@ export async function GET(request: Request) {
   });
   revalidatePath("/leaderboard");
 
-  return Response.json({ results, matchOdds, settled: true });
+  return Response.json({ results, settled: true });
 }

@@ -46,6 +46,7 @@ export const insertMatches = async (): Promise<SeedResult> => {
             homeId: homeTeam.id,
             awayId: awayTeam.id,
             stage: mapFdStageToStage(match.stage),
+            source: "FOOTBALL_DATA",
           },
         });
 

@@ -52,6 +52,7 @@ enum FixtureSource {
   ESPN
   FOOTBALL_DATA
   VEIKKAUS
+  MANUAL
 }
 
 model Tournament {
@@ -102,8 +103,13 @@ model Match {
   result           Result?
   stage            Stage     @default(GROUP)
   resultOverridden Boolean   @default(false)
+  // Where this fixture row came from — lets us spot/clean cross-source duplicates.
+  source           FixtureSource @default(ESPN)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt @default(now())
 
   @@index([startTime])
+  @@index([homeId, awayId])
 }
 
 model Player {
@@ -131,6 +137,8 @@ model Pick {
   predHome      Int?
   predAway      Int?
   awardedPoints Float   @default(0) @db.Real
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt @default(now())
 
   @@unique([userId, matchId])
   @@index([userId, matchId])

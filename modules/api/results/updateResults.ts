@@ -60,6 +60,7 @@ export const updateResults = async (): Promise<SeedResult> => {
             homeGoals: match.score.fullTime.home,
             awayGoals: match.score.fullTime.away,
             id: match.id,
+            source: "FOOTBALL_DATA",
           },
         });
         if (hadMatch) result.updated++;

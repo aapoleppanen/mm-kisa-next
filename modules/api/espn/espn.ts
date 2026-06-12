@@ -36,6 +36,14 @@ async function fetchEspnEvents(slug: string, start: Date, days = 45): Promise<Es
   return all;
 }
 
+/** The set of canonical match ids (parseInt of ESPN event ids) for the active tournament. */
+export async function fetchEspnEventIds(): Promise<Set<number>> {
+  const t = await getActiveTournament();
+  if (!t.espnLeagueSlug) return new Set();
+  const events = await fetchEspnEvents(t.espnLeagueSlug, t.startDate);
+  return new Set(events.map((e) => parseInt(e.id, 10)).filter((n) => !Number.isNaN(n)));
+}
+
 function sides(ev: EspnEvent) {
   const comp = ev.competitions[0]?.competitors ?? [];
   return {
@@ -101,8 +109,8 @@ export async function espnInsertMatches(): Promise<SeedResult> {
         const existing = await prisma.match.findUnique({ where: { id } });
         await prisma.match.upsert({
           where: { id },
-          update: { startTime: new Date(ev.date) },
-          create: { id, startTime: new Date(ev.date), homeId: homeTeam.id, awayId: awayTeam.id },
+          update: { startTime: new Date(ev.date), source: "ESPN" },
+          create: { id, startTime: new Date(ev.date), homeId: homeTeam.id, awayId: awayTeam.id, source: "ESPN" },
         });
         existing ? result.updated++ : result.inserted++;
       } catch (e) {

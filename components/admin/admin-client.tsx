@@ -121,6 +121,38 @@ export default function AdminClient({
     (r.unmapped.length ? ` · unmapped: ${r.unmapped.slice(0, 3).join(", ")}${r.unmapped.length > 3 ? "…" : ""}` : "") +
     (r.errors.length ? ` · errors: ${r.errors.length}` : "");
 
+  const dedupeMatches = async () => {
+    setLoading(true);
+    const res = await fetch("/api/admin/dedupe-matches", { method: "POST" }); // dry run
+    const plan = await res.json();
+    setLoading(false);
+    if (!res.ok) {
+      toast.error(plan.error ?? "Dedupe preview failed");
+      return;
+    }
+    if (!plan.matchesToDelete) {
+      toast.success("No duplicate matches found.");
+      return;
+    }
+    const msg =
+      `Delete ${plan.matchesToDelete} legacy matches, migrate ${plan.picksToMigrate} picks, ` +
+      `drop ${plan.picksToDropAsDuplicate} duplicate picks` +
+      (plan.conflicts.length ? `, ${plan.conflicts.length} conflict(s) left untouched` : "") +
+      `. Proceed?`;
+    if (!confirm(msg)) return;
+
+    setLoading(true);
+    const applyRes = await fetch("/api/admin/dedupe-matches?apply=true", { method: "POST" });
+    const applied = await applyRes.json();
+    setLoading(false);
+    if (applyRes.ok) {
+      toast.success(`Removed ${applied.matchesToDelete} duplicate matches, migrated ${applied.picksToMigrate} picks`);
+      loadHealth();
+    } else {
+      toast.error(applied.error ?? "Dedupe failed");
+    }
+  };
+
   const runAction = async (url: string, body?: object, label = "Done") => {
     setLoading(true);
     const res = await fetch(url, {
@@ -292,6 +324,9 @@ export default function AdminClient({
           </Button>
           <Button variant="outline" size="sm" disabled={loading} onClick={() => runAction("/api/admin/seed/odds?kind=player", undefined, "Player odds")}>
             Refresh scorer odds
+          </Button>
+          <Button variant="outline" size="sm" disabled={loading} onClick={dedupeMatches}>
+            Dedupe matches
           </Button>
         </div>
       </section>
