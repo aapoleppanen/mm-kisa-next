@@ -8,6 +8,7 @@ const UpdateProfileSchema = z.object({
   newName: z.string().min(1).max(100).optional(),
   // R2 object key (e.g. "avatars/xxx.png") or an absolute URL — resolved via storageUrl().
   avatar_url: z.string().max(500).nullable().optional(),
+  notifyReminders: z.boolean().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -22,13 +23,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
-  const { newName, avatar_url } = parsed.data;
+  const { newName, avatar_url, notifyReminders } = parsed.data;
 
   await prisma.user.update({
     where: { id: session.user.id },
     data: {
       ...(newName ? { name: newName } : {}),
       ...(avatar_url !== undefined ? { image: avatar_url } : {}),
+      ...(notifyReminders !== undefined ? { notifyReminders } : {}),
     },
   });
 

@@ -1,6 +1,7 @@
 import { getConfig } from "@/lib/config";
 import prisma from "@/lib/prisma";
 import { fetchResults } from "@/modules/api/results/fetchResults";
+import { sendPickReminders } from "@/modules/api/notifications/sendPickReminders";
 import { fillDefaultPicks } from "@/modules/api/scoring/fillDefaultPicks";
 import { settleAll } from "@/modules/api/scoring/settle";
 import { revalidatePath } from "next/cache";
@@ -31,11 +32,21 @@ export async function GET(request: Request) {
   const cfg = await getConfig();
   const defaultPicks = await fillDefaultPicks(cfg);
   await settleAll();
+
+  // Nudge players who haven't picked a soon-to-lock match. Isolated so a mail
+  // outage can never block result settlement.
+  let reminders = 0;
+  try {
+    reminders = await sendPickReminders(cfg);
+  } catch (err) {
+    console.error("[cron] sendPickReminders failed:", err);
+  }
+
   await prisma.config.update({
     where: { id: 1 },
     data: { lastCronRunAt: new Date() },
   });
   revalidatePath("/leaderboard");
 
-  return Response.json({ results, settled: true, defaultPicks });
+  return Response.json({ results, settled: true, defaultPicks, reminders });
 }

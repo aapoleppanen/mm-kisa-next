@@ -97,6 +97,7 @@ model Match {
   away             Team      @relation(name: "awayMatchs", fields: [awayId], references: [id])
   Pick             Pick[]    @relation("matchPicks")
   Comment          Comment[]
+  pickReminders    PickReminder[]
   awayWinOdds      Int       @default(0)
   homeWinOdds      Int       @default(0)
   drawOdds         Int       @default(0)
@@ -201,9 +202,26 @@ model User {
   banReason        String?
   banExpires       DateTime?
   hasPaid          Boolean   @default(false)
+  // Opt-out for the "your picks lock soon" email nudge.
+  notifyReminders  Boolean   @default(true)
+  pickReminders    PickReminder[]
 
   @@index([id])
   @@index([points])
+}
+
+// One row per reminder email sent, so the cron never nudges the same player
+// about the same match twice.
+model PickReminder {
+  id      Int      @id @default(autoincrement())
+  matchId Int
+  match   Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sentAt  DateTime @default(now())
+
+  @@unique([userId, matchId])
+  @@index([matchId])
 }
 
 model Session {

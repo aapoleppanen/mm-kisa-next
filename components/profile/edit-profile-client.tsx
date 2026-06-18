@@ -15,6 +15,7 @@ export default function EditProfileClient({ user }: { user: User }) {
   const router = useRouter();
   const [name, setName] = useState(user.name ?? "");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user.image);
+  const [notifyReminders, setNotifyReminders] = useState(user.notifyReminders);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -62,7 +63,7 @@ export default function EditProfileClient({ user }: { user: User }) {
     const res = await fetch("/api/profile/update", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ newName: name, avatar_url: avatarUrl }),
+      body: JSON.stringify({ newName: name, avatar_url: avatarUrl, notifyReminders }),
     });
     setSaving(false);
     if (res.ok) {
@@ -142,6 +143,31 @@ export default function EditProfileClient({ user }: { user: User }) {
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide">Registered Email</span>
             <p className="text-sm font-semibold text-slate-700 truncate">{user.email}</p>
           </div>
+
+          {/* Email reminder opt-out */}
+          <button
+            type="button"
+            onClick={() => setNotifyReminders((v) => !v)}
+            className="w-full flex items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100/50 text-left active-press"
+          >
+            <span className="flex flex-col">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide">Pick Reminders</span>
+              <span className="text-sm font-semibold text-slate-700">Email me an hour before picks lock</span>
+            </span>
+            <span
+              className={
+                "relative shrink-0 w-11 h-6 rounded-full transition-colors duration-200 " +
+                (notifyReminders ? "bg-primary" : "bg-slate-300")
+              }
+            >
+              <span
+                className={
+                  "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 " +
+                  (notifyReminders ? "translate-x-5" : "translate-x-0")
+                }
+              />
+            </span>
+          </button>
         </div>
 
         {/* Submit Actions */}
