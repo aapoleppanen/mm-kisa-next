@@ -1,6 +1,7 @@
 import { getConfig } from "@/lib/config";
 import prisma from "@/lib/prisma";
 import { fetchResults } from "@/modules/api/results/fetchResults";
+import { fillDefaultPicks } from "@/modules/api/scoring/fillDefaultPicks";
 import { settleAll } from "@/modules/api/scoring/settle";
 import { revalidatePath } from "next/cache";
 
@@ -25,6 +26,10 @@ export async function GET(request: Request) {
   }
 
   const results = await fetchResults();
+  // Default blank picks to 0–0 once a match locks, then settle so those
+  // defaults score in the same run if the result is already in.
+  const cfg = await getConfig();
+  const defaultPicks = await fillDefaultPicks(cfg);
   await settleAll();
   await prisma.config.update({
     where: { id: 1 },
@@ -32,5 +37,5 @@ export async function GET(request: Request) {
   });
   revalidatePath("/leaderboard");
 
-  return Response.json({ results, settled: true });
+  return Response.json({ results, settled: true, defaultPicks });
 }

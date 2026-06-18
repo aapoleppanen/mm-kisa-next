@@ -30,6 +30,7 @@ type Props = {
   lockLeadHours: number;
   updateUserCredits: (credits: number) => void;
   poolData?: PoolData;
+  commentCount?: number;
 };
 
 function usePotentialWin(
@@ -78,13 +79,16 @@ export default function MatchCard({
   lockLeadHours,
   updateUserCredits,
   poolData,
+  commentCount: initialCommentCount = 0,
 }: Props) {
   const [currentPick, setCurrentPick] = useState<Result | "">(result);
   const [betAmount, setBetAmount] = useState<number | "">(initialBet);
   const [predHome, setPredHome] = useState(initialPredHome ?? 0);
   const [predAway, setPredAway] = useState(initialPredAway ?? 0);
   const [showComments, setShowComments] = useState(false);
-  const [commentCount, setCommentCount] = useState<number | null>(null);
+  // Seed from the server-provided count so the badge shows before the drawer is
+  // ever opened; MatchComments refines it (post/delete) once mounted.
+  const [commentCount, setCommentCount] = useState<number | null>(initialCommentCount);
   const latestRef = useRef({ currentPick, betAmount, predHome, predAway });
   const disabled = disabledToday(new Date(match.startTime), lockLeadHours);
   const isExactScore = scoringMode === "EXACT_SCORE";

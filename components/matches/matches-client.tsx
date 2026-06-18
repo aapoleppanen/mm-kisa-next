@@ -20,6 +20,7 @@ type MatchWithRelations = Match & {
   home: Team;
   Pick?: Pick[];
   maxBet: number;
+  _count?: { Comment: number };
 };
 
 type Props = {
@@ -157,6 +158,7 @@ export default function MatchesClient({
                 lockLeadHours={lockLeadHours}
                 updateUserCredits={setCredits}
                 poolData={poolsData?.[match.id]}
+                commentCount={match._count?.Comment ?? 0}
               />
             </div>
           );
