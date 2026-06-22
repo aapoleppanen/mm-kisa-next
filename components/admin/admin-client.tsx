@@ -44,6 +44,7 @@ export default function AdminClient({
     canonical: { id: number; name: string }[];
   } | null>(null);
   const [mergeTargets, setMergeTargets] = useState<Record<number, number>>({});
+  const [testEmailTo, setTestEmailTo] = useState("");
 
   const loadHealth = () =>
     fetch("/api/admin/health").then((r) => r.json()).then(setHealth).catch(() => {});
@@ -241,6 +242,22 @@ export default function AdminClient({
       loadUsers();
     } else {
       toast.error("Failed to delete user");
+    }
+  };
+
+  const sendTestEmail = async () => {
+    setLoading(true);
+    const res = await fetch("/api/admin/test-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(testEmailTo ? { to: testEmailTo } : {}),
+    });
+    const data = await res.json().catch(() => ({}));
+    setLoading(false);
+    if (res.ok) {
+      toast.success(`Test email sent to ${data.to}`);
+    } else {
+      toast.error(data.error ?? "Failed to send test email");
     }
   };
 
@@ -567,6 +584,27 @@ export default function AdminClient({
               Reset {stage}
             </Button>
           ))}
+        </div>
+      </section>
+
+      <Separator />
+
+      <section className="space-y-3">
+        <h2 className="font-semibold text-lg">Email</h2>
+        <p className="text-xs text-muted-foreground">
+          Send a test email to confirm Resend is configured. Defaults to your own address.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Input
+            className="flex-1 min-w-[180px]"
+            type="email"
+            placeholder="Recipient (defaults to you)"
+            value={testEmailTo}
+            onChange={(e) => setTestEmailTo(e.target.value)}
+          />
+          <Button variant="outline" onClick={sendTestEmail} disabled={loading}>
+            Send test email
+          </Button>
         </div>
       </section>
 
