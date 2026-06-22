@@ -114,8 +114,8 @@ export async function GET(_request: NextRequest, { params }: Params) {
         result: true,
         homeGoals: true,
         awayGoals: true,
-        home: { select: { name: true } },
-        away: { select: { name: true } },
+        home: { select: { name: true, crest: true } },
+        away: { select: { name: true, crest: true } },
       },
     }),
     prisma.comment.findMany({
@@ -153,6 +153,8 @@ export async function GET(_request: NextRequest, { params }: Params) {
       awayGoals: match.awayGoals,
       homeName: match.home.name,
       awayName: match.away.name,
+      homeCrest: match.home.crest,
+      awayCrest: match.away.crest,
     },
     comments: comments.map((c) => ({
       ...c,

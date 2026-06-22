@@ -50,6 +50,8 @@ type MatchInfo = {
   awayGoals: number | null;
   homeName: string;
   awayName: string;
+  homeCrest: string;
+  awayCrest: string;
 };
 type Comment = {
   id: string;
@@ -99,77 +101,55 @@ function applyReactionToggle(
   });
 }
 
-function pickOutcomeLabel(pick: Extract<MentionPick, { none: false }>, match: MatchInfo | null) {
-  if (pick.predHome != null && pick.predAway != null) {
-    return `${pick.predHome}–${pick.predAway}`;
-  }
-  switch (pick.pickedResult) {
-    case "HOME_TEAM":
-      return match?.homeName ?? "Home";
-    case "AWAY_TEAM":
-      return match?.awayName ?? "Away";
-    case "DRAW":
-      return "Draw";
-    default:
-      return "—";
-  }
+// Short team code, e.g. "Finland" → "FIN", "South Korea" → "SOU".
+function teamAbbr(name: string): string {
+  const letters = name.replace(/[^A-Za-z]/g, "");
+  return (letters || name).slice(0, 3).toUpperCase();
 }
 
-// Tappable mention chip that reveals the tagged user's pick for this match.
-function MentionChip({ mention, match }: { mention: MentionView; match: MatchInfo | null }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  const { pick } = mention;
-  const settled = Boolean(match?.result && match.result !== "NO_RESULT");
-
+function Flag({ crest, alt }: { crest: string; alt: string }) {
+  // eslint-disable-next-line @next/next/no-img-element
   return (
-    <span ref={ref} className="relative inline-block">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="font-semibold text-primary hover:underline"
-      >
-        @{mention.name ?? "user"}
-      </button>
-      {open && (
-        <span className="absolute bottom-full left-0 mb-1 z-40 w-48 bg-white border border-border/80 rounded-xl shadow-lg p-2.5 block">
-          <span className="flex items-center gap-2 mb-1.5">
-            <Avatar className="size-6 shrink-0">
-              {mention.image && <AvatarImage src={cloudStorageLoader({ src: mention.image })} />}
-              <AvatarFallback className="text-[9px] bg-muted text-muted-foreground font-medium">
-                {mention.name?.[0] ?? "?"}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-xs font-bold text-slate-800 truncate">{mention.name}</span>
-          </span>
-          {pick.locked ? (
-            <span className="text-[11px] text-muted-foreground block">🔒 Pick reveals when this match locks.</span>
-          ) : pick.none ? (
-            <span className="text-[11px] text-muted-foreground block">No pick made for this match.</span>
-          ) : (
-            <span className="block space-y-0.5">
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide block">Their pick</span>
-              <span className="text-sm font-black text-slate-800 block">{pickOutcomeLabel(pick, match)}</span>
-              {pick.betAmount > 0 && (
-                <span className="text-[11px] text-slate-500 block">Stake: {pick.betAmount}</span>
-              )}
-              {settled && pick.awardedPoints > 0 && (
-                <span className="text-[11px] text-primary font-bold block">+{pick.awardedPoints.toFixed(1)} pts</span>
-              )}
-            </span>
-          )}
-        </span>
-      )}
+    <img
+      src={crest}
+      alt={alt}
+      className="inline-block h-3 w-[18px] object-contain align-text-bottom rounded-[2px]"
+      loading="lazy"
+      decoding="async"
+    />
+  );
+}
+
+// The bracketed pick shown inline after a tag: flag + code, a scoreline, or a
+// lock/dash when not revealed.
+function PickPill({ pick, match }: { pick: MentionPick; match: MatchInfo | null }) {
+  if (pick.locked) return <span className="text-muted-foreground">🔒</span>;
+  if (pick.none) return <span className="text-muted-foreground">—</span>;
+
+  if (pick.predHome != null && pick.predAway != null) {
+    return <span className="font-bold tabular-nums text-slate-700">{pick.predHome}–{pick.predAway}</span>;
+  }
+
+  if (pick.pickedResult === "DRAW") {
+    return <span className="font-semibold text-slate-700">🤝 X</span>;
+  }
+  const isHome = pick.pickedResult === "HOME_TEAM";
+  const crest = match ? (isHome ? match.homeCrest : match.awayCrest) : null;
+  const name = match ? (isHome ? match.homeName : match.awayName) : "?";
+  return (
+    <span className="inline-flex items-center gap-1 font-semibold text-slate-700">
+      {crest && <Flag crest={crest} alt={name} />}
+      {teamAbbr(name)}
+    </span>
+  );
+}
+
+// Mention rendered inline as "@name (pick)".
+function MentionChip({ mention, match }: { mention: MentionView; match: MatchInfo | null }) {
+  return (
+    <span className="whitespace-nowrap">
+      <span className="font-semibold text-primary">@{mention.name ?? "user"}</span>{" "}
+      <span className="text-slate-500">(<PickPill pick={mention.pick} match={match} />)</span>
     </span>
   );
 }
