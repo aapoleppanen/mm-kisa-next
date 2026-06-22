@@ -6,6 +6,7 @@ import { roundNumber } from "@/utils/numberUtils";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import PickBadge from "@/components/matches/pick-badge";
 
 type PickWithMatch = Pick & {
   match: Match & { home: Team; away: Team };
@@ -148,9 +149,15 @@ export default function UserPicksOverview({
                   {p.match.home.name} vs {p.match.away.name}
                 </span>
                 
-                <span className="text-slate-500 font-bold font-mono text-center min-w-[36px] bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">
-                  {p.predHome != null ? `${p.predHome}-${p.predAway}` : p.pickedResult}
-                </span>
+                <PickBadge
+                  predHome={p.predHome}
+                  predAway={p.predAway}
+                  pickedResult={p.pickedResult}
+                  homeName={p.match.home.name}
+                  awayName={p.match.away.name}
+                  homeCrest={p.match.home.crest}
+                  awayCrest={p.match.away.crest}
+                />
                 
                 <span className={cn(
                   "font-black font-mono w-10 text-right text-xs",
