@@ -6,6 +6,7 @@ import { signOut } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Session } from "@/auth";
+import NotificationBell from "@/components/notifications/notification-bell";
 
 const NAV_LINKS = [
   { href: "/profile", label: "Profile" },
@@ -49,6 +50,7 @@ export default function Header({ session, isAdmin }: { session: Session; isAdmin
         </nav>
       </div>
       <div className="flex items-center gap-4">
+        <NotificationBell />
         <div className="flex flex-col items-end">
           <span className="text-sm font-bold text-slate-800">
             {session.user.name}

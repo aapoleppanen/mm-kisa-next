@@ -18,11 +18,39 @@ import { useSession } from "@/lib/auth-client";
 import GifPickerPopover from "./gif-picker";
 import { storageUrl } from "@/utils/imageUtils";
 import { cn } from "@/lib/utils";
+import { tokenizeMentions, mentionToken } from "@/lib/mentions";
 
 const REACTIONS = ["⚽", "👍", "😂", "🔥", "❤️", "😮", "🎉", "😢"];
 
 type ReactionGroup = { emoji: string; count: number; userReacted: boolean };
 type CommentUser = { id: string; name: string | null; image: string | null };
+
+type MentionPick =
+  | { locked: true }
+  | { locked: false; none: true }
+  | {
+      locked: false;
+      none: false;
+      pickedResult: string | null;
+      predHome: number | null;
+      predAway: number | null;
+      betAmount: number;
+      awardedPoints: number;
+    };
+type MentionView = {
+  userId: string;
+  name: string | null;
+  image: string | null;
+  pick: MentionPick;
+};
+type MatchInfo = {
+  locked: boolean;
+  result: string | null;
+  homeGoals: number | null;
+  awayGoals: number | null;
+  homeName: string;
+  awayName: string;
+};
 type Comment = {
   id: string;
   content: string;
@@ -30,7 +58,9 @@ type Comment = {
   createdAt: string;
   user: CommentUser;
   reactions: ReactionGroup[];
+  mentions: MentionView[];
 };
+type SearchUser = { id: string; name: string | null; image: string | null };
 
 function applyReactionToggle(
   comments: Comment[],
@@ -67,6 +97,96 @@ function applyReactionToggle(
       reactions: [...c.reactions, { emoji, count: 1, userReacted: true }],
     };
   });
+}
+
+function pickOutcomeLabel(pick: Extract<MentionPick, { none: false }>, match: MatchInfo | null) {
+  if (pick.predHome != null && pick.predAway != null) {
+    return `${pick.predHome}–${pick.predAway}`;
+  }
+  switch (pick.pickedResult) {
+    case "HOME_TEAM":
+      return match?.homeName ?? "Home";
+    case "AWAY_TEAM":
+      return match?.awayName ?? "Away";
+    case "DRAW":
+      return "Draw";
+    default:
+      return "—";
+  }
+}
+
+// Tappable mention chip that reveals the tagged user's pick for this match.
+function MentionChip({ mention, match }: { mention: MentionView; match: MatchInfo | null }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const { pick } = mention;
+  const settled = Boolean(match?.result && match.result !== "NO_RESULT");
+
+  return (
+    <span ref={ref} className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="font-semibold text-primary hover:underline"
+      >
+        @{mention.name ?? "user"}
+      </button>
+      {open && (
+        <span className="absolute bottom-full left-0 mb-1 z-40 w-48 bg-white border border-border/80 rounded-xl shadow-lg p-2.5 block">
+          <span className="flex items-center gap-2 mb-1.5">
+            <Avatar className="size-6 shrink-0">
+              {mention.image && <AvatarImage src={cloudStorageLoader({ src: mention.image })} />}
+              <AvatarFallback className="text-[9px] bg-muted text-muted-foreground font-medium">
+                {mention.name?.[0] ?? "?"}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-xs font-bold text-slate-800 truncate">{mention.name}</span>
+          </span>
+          {pick.locked ? (
+            <span className="text-[11px] text-muted-foreground block">🔒 Pick reveals when this match locks.</span>
+          ) : pick.none ? (
+            <span className="text-[11px] text-muted-foreground block">No pick made for this match.</span>
+          ) : (
+            <span className="block space-y-0.5">
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide block">Their pick</span>
+              <span className="text-sm font-black text-slate-800 block">{pickOutcomeLabel(pick, match)}</span>
+              {pick.betAmount > 0 && (
+                <span className="text-[11px] text-slate-500 block">Stake: {pick.betAmount}</span>
+              )}
+              {settled && pick.awardedPoints > 0 && (
+                <span className="text-[11px] text-primary font-bold block">+{pick.awardedPoints.toFixed(1)} pts</span>
+              )}
+            </span>
+          )}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function CommentBody({ comment, match }: { comment: Comment; match: MatchInfo | null }) {
+  const segments = tokenizeMentions(comment.content);
+  const mentionByText = new Map(comment.mentions.map((m) => [m.userId, m]));
+  return (
+    <p className="text-sm text-foreground/90 break-words mt-0.5 leading-snug text-pretty">
+      {segments.map((seg, i) => {
+        if (seg.type === "text") return <span key={i}>{seg.value}</span>;
+        const mention = mentionByText.get(seg.userId);
+        if (!mention) return <span key={i} className="font-semibold text-primary">@{seg.name}</span>;
+        return <MentionChip key={i} mention={mention} match={match} />;
+      })}
+    </p>
+  );
 }
 
 function EmojiPickerPopover({
@@ -171,11 +291,13 @@ function CommentMenu({ onDelete }: { onDelete: () => void }) {
 
 function CommentItem({
   comment,
+  match,
   onReact,
   onDelete,
   currentUserId,
 }: {
   comment: Comment;
+  match: MatchInfo | null;
   onReact: (id: string, emoji: string) => void;
   onDelete: (id: string) => void;
   currentUserId?: string;
@@ -204,11 +326,7 @@ function CommentItem({
             <CommentMenu onDelete={() => onDelete(comment.id)} />
           )}
         </div>
-        {hasText && (
-          <p className="text-sm text-foreground/90 break-words mt-0.5 leading-snug text-pretty">
-            {comment.content}
-          </p>
-        )}
+        {hasText && <CommentBody comment={comment} match={match} />}
         {comment.gifUrl && (
           <div className="mt-1.5 rounded-lg overflow-hidden border border-border/60 max-w-fit bg-muted/30">
             <img
@@ -256,7 +374,10 @@ export default function MatchComments({
 }) {
   const { data: session } = useSession();
   const [comments, setComments] = useState<Comment[]>([]);
+  const [match, setMatch] = useState<MatchInfo | null>(null);
   const [text, setText] = useState("");
+  // Mentions the user picked from the autocomplete; converted to tokens on post.
+  const [mentions, setMentions] = useState<{ name: string; userId: string }[]>([]);
   const [gifUrl, setGifUrl] = useState<string | null>(null);
   const [imageKey, setImageKey] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -264,17 +385,85 @@ export default function MatchComments({
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // @mention autocomplete state
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionStart, setMentionStart] = useState(0);
+  const [results, setResults] = useState<SearchUser[]>([]);
 
   useEffect(() => {
     fetch(`/api/comments/${matchId}`)
       .then((r) => r.json())
-      .then(({ comments }) => setComments(comments ?? []))
+      .then(({ comments, match }) => {
+        setComments(comments ?? []);
+        setMatch(match ?? null);
+      })
       .finally(() => setLoading(false));
   }, [matchId]);
 
   useEffect(() => {
     onCountChange?.(comments.length);
   }, [comments.length, onCountChange]);
+
+  // Debounced user search when an @token is active.
+  useEffect(() => {
+    if (mentionQuery == null) {
+      setResults([]);
+      return;
+    }
+    const t = setTimeout(() => {
+      fetch(`/api/users/search?q=${encodeURIComponent(mentionQuery)}`)
+        .then((r) => r.json())
+        .then(({ users }) => setResults(users ?? []))
+        .catch(() => setResults([]));
+    }, 180);
+    return () => clearTimeout(t);
+  }, [mentionQuery]);
+
+  // Detect an in-progress @token immediately before the caret.
+  const syncMentionTrigger = (value: string, caret: number) => {
+    const before = value.slice(0, caret);
+    const m = before.match(/(?:^|\s)@(\w*)$/);
+    if (m) {
+      setMentionQuery(m[1]);
+      setMentionStart(caret - m[1].length - 1); // index of the '@'
+    } else {
+      setMentionQuery(null);
+    }
+  };
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setText(value);
+    syncMentionTrigger(value, e.target.selectionStart ?? value.length);
+  };
+
+  const selectMention = (user: SearchUser) => {
+    const name = user.name ?? "user";
+    const caret = textareaRef.current?.selectionStart ?? text.length;
+    const next = `${text.slice(0, mentionStart)}@${name} ${text.slice(caret)}`;
+    setText(next);
+    setMentions((prev) => [...prev, { name, userId: user.id }]);
+    setMentionQuery(null);
+    setResults([]);
+    textareaRef.current?.focus();
+  };
+
+  // Replace each visible "@Name" with its stored token. Tokens (@[Name](id))
+  // don't contain a bare "@Name", so sequential first-match replacement is safe.
+  const toStoredContent = () => {
+    let out = text.trim();
+    // Longest names first so "@Sammy" converts before "@Sam" can match its prefix.
+    const ordered = [...mentions].sort((a, b) => b.name.length - a.name.length);
+    for (const m of ordered) {
+      const needle = `@${m.name}`;
+      const idx = out.indexOf(needle);
+      if (idx === -1) continue;
+      out = out.slice(0, idx) + mentionToken(m.name, m.userId) + out.slice(idx + needle.length);
+    }
+    return out;
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -327,7 +516,7 @@ export default function MatchComments({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        content: text.trim(),
+        content: toStoredContent(),
         gifUrl: gifUrl ?? (imageKey ? storageUrl(imageKey) : null),
       }),
     });
@@ -339,6 +528,7 @@ export default function MatchComments({
     const { comment } = await res.json();
     setComments((prev) => [...prev, comment]);
     setText("");
+    setMentions([]);
     setGifUrl(null);
     clearImage();
   };
@@ -390,6 +580,7 @@ export default function MatchComments({
               <CommentItem
                 key={c.id}
                 comment={c}
+                match={match}
                 onReact={handleReaction}
                 onDelete={handleDelete}
                 currentUserId={session?.user.id}
@@ -423,20 +614,50 @@ export default function MatchComments({
           )}
 
           <div className="flex gap-2 items-end">
-            <textarea
-              placeholder="Add a comment…"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              maxLength={500}
-              rows={2}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                  e.preventDefault();
-                  handlePost();
+            <div className="relative flex-1">
+              {/* @mention autocomplete dropdown */}
+              {mentionQuery != null && results.length > 0 && (
+                <div className="absolute bottom-full left-0 mb-1 z-40 w-56 bg-white border border-border/80 rounded-xl shadow-lg overflow-hidden">
+                  {results.map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => selectMention(u)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors duration-150"
+                    >
+                      <Avatar className="size-6 shrink-0">
+                        {u.image && <AvatarImage src={cloudStorageLoader({ src: u.image })} />}
+                        <AvatarFallback className="text-[9px] bg-muted text-muted-foreground font-medium">
+                          {u.name?.[0] ?? "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm text-slate-700 truncate">{u.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <textarea
+                ref={textareaRef}
+                placeholder="Add a comment… use @ to tag someone"
+                value={text}
+                onChange={handleTextChange}
+                onKeyUp={(e) =>
+                  syncMentionTrigger(
+                    (e.target as HTMLTextAreaElement).value,
+                    (e.target as HTMLTextAreaElement).selectionStart ?? 0
+                  )
                 }
-              }}
-              className="flex-1 border border-border/60 rounded-lg px-3 py-2 text-sm bg-white placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40 resize-none leading-snug"
-            />
+                maxLength={500}
+                rows={2}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    handlePost();
+                  }
+                }}
+                className="w-full border border-border/60 rounded-lg px-3 py-2 text-sm bg-white placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40 resize-none leading-snug"
+              />
+            </div>
             <div className="flex items-center gap-1.5 shrink-0 pb-0.5">
               <input
                 ref={imageInputRef}

@@ -2,9 +2,11 @@ import { auth } from "@/auth";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import type { Pick as PrismaPick } from "@prisma/client";
 import prisma from "@/lib/prisma";
-import { getConfig } from "@/lib/config";
+import { disabledToday, getConfig } from "@/lib/config";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { parseMentionIds } from "@/lib/mentions";
 
 const CommentSchema = z
   .object({
@@ -32,7 +34,70 @@ function groupReactions(
   return Array.from(map.entries()).map(([emoji, data]) => ({ emoji, ...data }));
 }
 
-export async function GET(request: NextRequest, { params }: Params) {
+export type MentionPick =
+  | { locked: true }
+  | { locked: false; none: true }
+  | {
+      locked: false;
+      none: false;
+      pickedResult: PrismaPick["pickedResult"];
+      predHome: number | null;
+      predAway: number | null;
+      betAmount: number;
+      awardedPoints: number;
+    };
+
+type MentionView = {
+  userId: string;
+  name: string | null;
+  image: string | null;
+  pick: MentionPick;
+};
+
+type CommentWithMentions = {
+  mentions: {
+    mentionedUserId: string;
+    mentionedUser: { id: string; name: string | null; image: string | null };
+  }[];
+};
+
+// Build the per-mention pick payload, revealing a tagged user's pick only once
+// the match has locked (or when the viewer is that user themselves).
+function buildMentions(
+  comment: CommentWithMentions,
+  pickByUser: Map<string, PrismaPick>,
+  locked: boolean,
+  currentUserId: string | undefined
+): MentionView[] {
+  return comment.mentions.map((m) => {
+    const reveal = locked || m.mentionedUserId === currentUserId;
+    let pick: MentionPick;
+    if (!reveal) {
+      pick = { locked: true };
+    } else {
+      const p = pickByUser.get(m.mentionedUserId);
+      pick = p
+        ? {
+            locked: false,
+            none: false,
+            pickedResult: p.pickedResult,
+            predHome: p.predHome,
+            predAway: p.predAway,
+            betAmount: p.betAmount,
+            awardedPoints: p.awardedPoints,
+          }
+        : { locked: false, none: true };
+    }
+    return {
+      userId: m.mentionedUserId,
+      name: m.mentionedUser.name,
+      image: m.mentionedUser.image,
+      pick,
+    };
+  });
+}
+
+export async function GET(_request: NextRequest, { params }: Params) {
   const { matchId } = await params;
   const id = parseInt(matchId, 10);
   if (isNaN(id)) return NextResponse.json({ error: "Invalid matchId" }, { status: 400 });
@@ -40,19 +105,59 @@ export async function GET(request: NextRequest, { params }: Params) {
   const session = await auth.api.getSession({ headers: await headers() }).catch(() => null);
   const currentUserId = session?.user.id;
 
-  const comments = await prisma.comment.findMany({
-    where: { matchId: id },
-    include: {
-      user: { select: { name: true, image: true, id: true } },
-      reactions: { select: { emoji: true, userId: true } },
-    },
-    orderBy: { createdAt: "asc" },
-  });
+  const [cfg, match, comments] = await Promise.all([
+    getConfig(),
+    prisma.match.findUnique({
+      where: { id },
+      select: {
+        startTime: true,
+        result: true,
+        homeGoals: true,
+        awayGoals: true,
+        home: { select: { name: true } },
+        away: { select: { name: true } },
+      },
+    }),
+    prisma.comment.findMany({
+      where: { matchId: id },
+      include: {
+        user: { select: { name: true, image: true, id: true } },
+        reactions: { select: { emoji: true, userId: true } },
+        mentions: {
+          include: { mentionedUser: { select: { id: true, name: true, image: true } } },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+
+  const locked = match ? disabledToday(match.startTime, cfg.lockLeadHours) : false;
+
+  // One query for every tagged user's pick on this match, then map by user.
+  const mentionedIds = Array.from(
+    new Set(comments.flatMap((c) => c.mentions.map((m) => m.mentionedUserId)))
+  );
+  const pickByUser = new Map<string, PrismaPick>();
+  if (mentionedIds.length) {
+    const picks = await prisma.pick.findMany({
+      where: { matchId: id, userId: { in: mentionedIds } },
+    });
+    for (const p of picks) pickByUser.set(p.userId, p);
+  }
 
   return NextResponse.json({
+    match: match && {
+      locked,
+      result: match.result,
+      homeGoals: match.homeGoals,
+      awayGoals: match.awayGoals,
+      homeName: match.home.name,
+      awayName: match.away.name,
+    },
     comments: comments.map((c) => ({
       ...c,
       reactions: groupReactions(c.reactions, currentUserId),
+      mentions: buildMentions(c, pickByUser, locked, currentUserId),
     })),
   });
 }
@@ -84,21 +189,49 @@ export async function POST(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
+  // Parse mentions from the content itself (authoritative — don't trust a
+  // client-supplied list), validate the users exist, and never self-notify.
+  const rawIds = parseMentionIds(parsed.data.content).filter((uid) => uid !== session.user.id);
+  const validIds = rawIds.length
+    ? (await prisma.user.findMany({ where: { id: { in: rawIds } }, select: { id: true } })).map((u) => u.id)
+    : [];
+
+  const match = await prisma.match.findUnique({ where: { id }, select: { startTime: true } });
+  const locked = match ? disabledToday(match.startTime, cfg.lockLeadHours) : false;
+
   const comment = await prisma.comment.create({
     data: {
       content: parsed.data.content,
       gifUrl: parsed.data.gifUrl ?? null,
       matchId: id,
       userId: session.user.id,
+      mentions: validIds.length
+        ? { createMany: { data: validIds.map((uid) => ({ mentionedUserId: uid })) } }
+        : undefined,
     },
     include: {
       user: { select: { name: true, image: true, id: true } },
       reactions: { select: { emoji: true, userId: true } },
+      mentions: {
+        include: { mentionedUser: { select: { id: true, name: true, image: true } } },
+      },
     },
   });
 
+  const pickByUser = new Map<string, PrismaPick>();
+  if (validIds.length) {
+    const picks = await prisma.pick.findMany({ where: { matchId: id, userId: { in: validIds } } });
+    for (const p of picks) pickByUser.set(p.userId, p);
+  }
+
   return NextResponse.json(
-    { comment: { ...comment, reactions: [] } },
+    {
+      comment: {
+        ...comment,
+        reactions: [],
+        mentions: buildMentions(comment, pickByUser, locked, session.user.id),
+      },
+    },
     { status: 201 }
   );
 }

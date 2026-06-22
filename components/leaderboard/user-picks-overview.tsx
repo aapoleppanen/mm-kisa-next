@@ -7,10 +7,16 @@ import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
+type PickWithMatch = Pick & {
+  match: Match & { home: Team; away: Team };
+  locked?: boolean;
+};
+
 type FullUser = User & {
-  picks: (Pick & { match: Match & { home: Team; away: Team } })[];
+  picks: PickWithMatch[];
   winnerPick: Team | null;
   topScorerPick: Player | null;
+  outrightsLocked?: boolean;
 };
 
 function getPotentialWin(bet: number, pick: Result | null, match: Match) {
@@ -62,7 +68,7 @@ export default function UserPicksOverview({
         )}>
           <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-1">👑 Champ Pick</span>
           <span className="text-slate-800 font-bold text-center truncate max-w-full">
-            {picks.winnerPick?.name ?? "—"}
+            {picks.outrightsLocked ? "🔒" : picks.winnerPick?.name ?? "—"}
           </span>
           {picks.winnerPick?.winningOdds && (
             <span className="text-[9px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.2 rounded-full mt-0.5">
@@ -77,7 +83,7 @@ export default function UserPicksOverview({
         )}>
           <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none mb-1">⭐ Golden Boot</span>
           <span className="text-slate-800 font-bold text-center truncate max-w-full">
-            {picks.topScorerPick?.name ?? "—"}
+            {picks.outrightsLocked ? "🔒" : picks.topScorerPick?.name ?? "—"}
           </span>
           {picks.topScorerPick?.odds && (
             <span className="text-[9px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.2 rounded-full mt-0.5">
@@ -103,6 +109,24 @@ export default function UserPicksOverview({
           </p>
         ) : (
           picks.picks.map((p) => {
+            if (p.locked) {
+              return (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between text-xs gap-3.5 py-2 px-3 bg-white border border-slate-100 rounded-xl shadow-sm"
+                >
+                  <span className="text-slate-400 font-bold w-8 font-mono">
+                    {format(new Date(p.match.startTime), "d.M.")}
+                  </span>
+                  <span className="flex-1 truncate font-semibold text-slate-700">
+                    {p.match.home.name} vs {p.match.away.name}
+                  </span>
+                  <span className="text-slate-400 font-medium text-[10px] flex items-center gap-1">
+                    🔒 Hidden until lock
+                  </span>
+                </div>
+              );
+            }
             const won = p.pickedResult === p.match.result;
             const matchDone = !!p.match.result;
             const displayPts = matchDone && p.awardedPoints > 0

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import type { PoolData } from "@/lib/pools";
+import type { PickDist } from "./matches-client";
 import { Input } from "@/components/ui/input";
 import { decimalOdds, disabledToday } from "@/lib/config";
 import { cn } from "@/lib/utils";
@@ -31,7 +32,21 @@ type Props = {
   updateUserCredits: (credits: number) => void;
   poolData?: PoolData;
   commentCount?: number;
+  pickDist?: PickDist;
+  defaultOpenComments?: boolean;
 };
+
+// "1d 3h", "3h 12m", "12m", or "<1m" until the given timestamp.
+function formatCountdown(ms: number): string {
+  const totalMin = Math.floor(ms / 60_000);
+  if (totalMin < 1) return "<1m";
+  const days = Math.floor(totalMin / 1440);
+  const hours = Math.floor((totalMin % 1440) / 60);
+  const mins = totalMin % 60;
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${mins}m`;
+  return `${mins}m`;
+}
 
 function usePotentialWin(
   betAmount: number | "",
@@ -80,17 +95,34 @@ export default function MatchCard({
   updateUserCredits,
   poolData,
   commentCount: initialCommentCount = 0,
+  pickDist,
+  defaultOpenComments = false,
 }: Props) {
   const [currentPick, setCurrentPick] = useState<Result | "">(result);
   const [betAmount, setBetAmount] = useState<number | "">(initialBet);
   const [predHome, setPredHome] = useState(initialPredHome ?? 0);
   const [predAway, setPredAway] = useState(initialPredAway ?? 0);
-  const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(defaultOpenComments);
   // Seed from the server-provided count so the badge shows before the drawer is
   // ever opened; MatchComments refines it (post/delete) once mounted.
   const [commentCount, setCommentCount] = useState<number | null>(initialCommentCount);
   const latestRef = useRef({ currentPick, betAmount, predHome, predAway });
   const disabled = disabledToday(new Date(match.startTime), lockLeadHours);
+
+  // Live countdown to the pick lock (kickoff − lockLeadHours).
+  const lockAt = new Date(match.startTime).getTime() - lockLeadHours * 3_600_000;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (disabled) return; // no need to tick once locked
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, [disabled]);
+  const msToLock = lockAt - now;
+
+  // Crowd pick distribution — only revealed once picks have locked.
+  const distTotal = pickDist ? pickDist.HOME_TEAM + pickDist.DRAW + pickDist.AWAY_TEAM : 0;
+  const showCrowd = disabled && distTotal > 0;
+  const crowdPct = (n: number) => (distTotal ? Math.round((n / distTotal) * 100) : 0);
   const isExactScore = scoringMode === "EXACT_SCORE";
   const isContrarian = scoringMode === "CONTRARIAN";
   const isPariMutuel = scoringMode === "PARI_MUTUEL";
@@ -271,12 +303,49 @@ export default function MatchCard({
         </span>
       </div>
 
+      {/* Lock countdown strip (hidden once the match has a final score) */}
+      {!hasScore && (
+        <div className="px-4 py-1.5 flex items-center justify-center border-b border-border/40 bg-slate-50/50">
+          {disabled ? (
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">🔒 Picks locked</span>
+          ) : (
+            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">
+              🕒 Locks in {formatCountdown(msToLock)}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Pick buttons */}
       <div className="flex gap-2.5 p-3">
         <PickButton pickResult={Result.HOME_TEAM} label={match.home.name} crest={match.home.crest} />
         <PickButton pickResult={Result.DRAW} label="Draw" />
         <PickButton pickResult={Result.AWAY_TEAM} label={match.away.name} crest={match.away.crest} />
       </div>
+
+      {/* Crowd pick distribution — revealed only after lock */}
+      {showCrowd && (
+        <div className="px-3 pb-2 -mt-1 space-y-1">
+          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+            Crowd picks · {distTotal}
+          </div>
+          {[
+            { label: match.home.name, n: pickDist!.HOME_TEAM },
+            { label: "Draw", n: pickDist!.DRAW },
+            { label: match.away.name, n: pickDist!.AWAY_TEAM },
+          ].map((s) => (
+            <div key={s.label} className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold text-slate-500 w-16 truncate">{s.label}</span>
+              <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                <div className="h-full bg-primary/60 rounded-full" style={{ width: `${crowdPct(s.n)}%` }} />
+              </div>
+              <span className="text-[10px] font-bold text-slate-600 w-8 text-right tabular-nums">
+                {crowdPct(s.n)}%
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Bet / score row */}
       <div className="px-3 pb-4">
