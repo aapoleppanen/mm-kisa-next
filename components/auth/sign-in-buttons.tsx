@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { signIn, signUp } from "@/lib/auth-client";
+import { authClient, signIn, signUp } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import FootballLoader from "@/components/ui/football-loader";
 
-type Mode = "signin" | "signup";
+type Mode = "signin" | "signup" | "forgot" | "magic-link";
 
 export default function SignInButtons() {
   const router = useRouter();
@@ -21,6 +21,7 @@ export default function SignInButtons() {
   const [loading, setLoading] = useState(false);
   const [mobilepayNumber, setMobilepayNumber] = useState<string | null>(null);
   const [showPayReminder, setShowPayReminder] = useState(false);
+  const [sent, setSent] = useState(false);
 
   useEffect(() => {
     fetch("/api/public/config")
@@ -29,7 +30,12 @@ export default function SignInButtons() {
       .catch(() => {});
   }, []);
 
-  const handleEmailAuth = async (e: React.FormEvent) => {
+  const switchMode = (next: Mode) => {
+    setMode(next);
+    setSent(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
@@ -50,6 +56,26 @@ export default function SignInButtons() {
           router.push("/matches");
           router.refresh();
         }
+      }
+    } else if (mode === "forgot") {
+      const { error } = await authClient.requestPasswordReset({
+        email,
+        redirectTo: "/reset-password",
+      });
+      if (error) {
+        toast.error(error.message ?? "Something went wrong");
+      } else {
+        setSent(true);
+      }
+    } else if (mode === "magic-link") {
+      const { error } = await authClient.signIn.magicLink({
+        email,
+        callbackURL: "/matches",
+      });
+      if (error) {
+        toast.error(error.message ?? "Something went wrong");
+      } else {
+        setSent(true);
       }
     } else {
       const { error } = await signIn.email({
@@ -92,6 +118,27 @@ export default function SignInButtons() {
     );
   }
 
+  if (sent && (mode === "forgot" || mode === "magic-link")) {
+    return (
+      <div className="flex flex-col items-center gap-4 w-full max-w-sm text-center">
+        <div className="text-4xl">📬</div>
+        <h3 className="text-lg font-bold text-slate-800">Check your email</h3>
+        <p className="text-sm text-slate-600">
+          {mode === "forgot"
+            ? `If an account exists for ${email}, we've sent a password reset link.`
+            : `We've sent a sign-in link to ${email}. It expires in 5 minutes.`}
+        </p>
+        <button
+          type="button"
+          onClick={() => switchMode("signin")}
+          className="text-xs font-semibold text-primary hover:underline text-center transition-colors py-1"
+        >
+          Back to sign in
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4 w-full max-w-sm">
       {/* {mode === "signup" && mobilepayNumber && (
@@ -103,7 +150,7 @@ export default function SignInButtons() {
         </div> */}
       {/* )} */}
 
-      <form onSubmit={handleEmailAuth} className="flex flex-col gap-3">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         {mode === "signup" && (
           <Input
             type="text"
@@ -124,27 +171,39 @@ export default function SignInButtons() {
           autoComplete="email"
           className="rounded-xl border-border/80 focus-visible:ring-primary/20 focus-visible:border-primary transition-all duration-200"
         />
-        <div className="relative">
-          <Input
-            type={showPassword ? "text" : "password"}
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete={
-              mode === "signup" ? "new-password" : "current-password"
-            }
-            className="pr-10 rounded-xl border-border/80 focus-visible:ring-primary/20 focus-visible:border-primary transition-all duration-200"
-          />
+        {(mode === "signin" || mode === "signup") && (
+          <div className="relative">
+            <Input
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete={
+                mode === "signup" ? "new-password" : "current-password"
+              }
+              className="pr-10 rounded-xl border-border/80 focus-visible:ring-primary/20 focus-visible:border-primary transition-all duration-200"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+        )}
+
+        {mode === "signin" && (
           <button
             type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-            tabIndex={-1}
+            onClick={() => switchMode("forgot")}
+            className="self-end text-xs font-semibold text-muted-foreground hover:text-primary hover:underline transition-colors -mt-1"
           >
-            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            Forgot password?
           </button>
-        </div>
+        )}
 
         <Button
           type="submit"
@@ -155,20 +214,42 @@ export default function SignInButtons() {
             <FootballLoader size="sm" mode="inline" />
           ) : mode === "signin" ? (
             "Sign in"
-          ) : (
+          ) : mode === "signup" ? (
             "Create account"
+          ) : mode === "forgot" ? (
+            "Send reset link"
+          ) : (
+            "Send sign-in link"
           )}
         </Button>
       </form>
 
+      {mode === "signin" && (
+        <button
+          type="button"
+          onClick={() => switchMode("magic-link")}
+          className="text-xs font-semibold text-muted-foreground hover:text-primary hover:underline text-center transition-colors -mt-2"
+        >
+          Or sign in with an email link instead
+        </button>
+      )}
+
       <button
         type="button"
-        onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+        onClick={() =>
+          switchMode(
+            mode === "signin"
+              ? "signup"
+              : "signin"
+          )
+        }
         className="text-xs font-semibold text-primary hover:underline text-center transition-colors py-1"
       >
-        {mode === "signin"
-          ? "Don't have an account? Sign up"
-          : "Already have an account? Sign in"}
+        {mode === "signup"
+          ? "Already have an account? Sign in"
+          : mode === "signin"
+            ? "Don't have an account? Sign up"
+            : "Back to sign in"}
       </button>
     </div>
   );
