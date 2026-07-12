@@ -52,6 +52,18 @@ function sides(ev: EspnEvent) {
   };
 }
 
+/** Create/refresh the Team row for an ESPN competitor and return its id (or null). */
+async function upsertEspnTeam(c: EspnCompetitor | undefined): Promise<number | null> {
+  const name = c?.team?.displayName;
+  if (!name) return null;
+  const team = await prisma.team.upsert({
+    where: { name },
+    update: { crest: c.team.logo ?? "" },
+    create: { name, crest: c.team.logo ?? "" },
+  });
+  return team.id;
+}
+
 export async function espnSeedTeams(): Promise<SeedResult> {
   const result = emptySeedResult();
   try {
@@ -94,23 +106,21 @@ export async function espnInsertMatches(): Promise<SeedResult> {
           result.skipped++;
           continue;
         }
-        const homeTeam = await prisma.team.findUnique({ where: { name: home.team.displayName } });
-        const awayTeam = await prisma.team.findUnique({ where: { name: away.team.displayName } });
-        if (!homeTeam) {
-          result.unmapped.push(home.team.displayName);
-          continue;
-        }
-        if (!awayTeam) {
-          result.unmapped.push(away.team.displayName);
+        const homeId = await upsertEspnTeam(home);
+        const awayId = await upsertEspnTeam(away);
+        if (!homeId || !awayId) {
+          result.skipped++;
           continue;
         }
         const id = parseInt(ev.id, 10);
         // ESPN scoreboard doesn't expose group/knockout stage — admin sets stages manually.
+        // Re-point homeId/awayId on update too, so a re-seed swaps knockout placeholders
+        // ("Quarterfinal 1 Winner") for the real competitors once the bracket resolves.
         const existing = await prisma.match.findUnique({ where: { id } });
         await prisma.match.upsert({
           where: { id },
-          update: { startTime: new Date(ev.date), source: "ESPN" },
-          create: { id, startTime: new Date(ev.date), homeId: homeTeam.id, awayId: awayTeam.id, source: "ESPN" },
+          update: { startTime: new Date(ev.date), source: "ESPN", homeId, awayId },
+          create: { id, startTime: new Date(ev.date), homeId, awayId, source: "ESPN" },
         });
         existing ? result.updated++ : result.inserted++;
       } catch (e) {
@@ -132,20 +142,43 @@ export async function espnFetchResults(): Promise<SeedResult> {
     const events = await fetchEspnEvents(t.espnLeagueSlug, t.startDate);
     for (const ev of events) {
       try {
-        if (!ev.status?.type?.completed) {
-          result.skipped++;
-          continue;
-        }
         const id = parseInt(ev.id, 10);
         const existing = await prisma.match.findUnique({
           where: { id },
-          select: { resultOverridden: true },
+          select: { resultOverridden: true, homeId: true, awayId: true },
         });
-        if (existing?.resultOverridden) {
+        // Only touch matches we already track; creation is espnInsertMatches' job.
+        if (!existing) {
           result.skipped++;
           continue;
         }
         const { home, away } = sides(ev);
+
+        // Re-point to the real teams as soon as ESPN knows them. Knockout matches
+        // are seeded with placeholders ("Quarterfinal 1 Winner"); once the bracket
+        // resolves, ESPN serves the actual competitors on the same event id, so
+        // this replaces the placeholders (and refreshes crests) even before kickoff.
+        const homeId = await upsertEspnTeam(home);
+        const awayId = await upsertEspnTeam(away);
+        if (
+          (homeId && homeId !== existing.homeId) ||
+          (awayId && awayId !== existing.awayId)
+        ) {
+          await prisma.match.update({
+            where: { id },
+            data: {
+              ...(homeId ? { homeId } : {}),
+              ...(awayId ? { awayId } : {}),
+            },
+          });
+        }
+
+        // Scores only settle once the match is complete and an admin hasn't
+        // manually overridden the result.
+        if (!ev.status?.type?.completed || existing.resultOverridden) {
+          result.skipped++;
+          continue;
+        }
         if (!home || !away) {
           result.skipped++;
           continue;
